@@ -113,12 +113,14 @@ export default function RoadmapBuilder({
 
   const onNodeDrag = useCallback(
     (_: React.MouseEvent, draggedNode: Node) => {
+      const dW = draggedNode.measured?.width ?? NODE_WIDTH;
+      const dH = draggedNode.measured?.height ?? NODE_HEIGHT;
       const dx = draggedNode.position.x;
       const dy = draggedNode.position.y;
-      const dCX = dx + NODE_WIDTH / 2;
-      const dCY = dy + NODE_HEIGHT / 2;
-      const dR = dx + NODE_WIDTH;
-      const dB = dy + NODE_HEIGHT;
+      const dCX = dx + dW / 2;
+      const dCY = dy + dH / 2;
+      const dR = dx + dW;
+      const dB = dy + dH;
 
       const newGuides: Guide[] = [];
       const seenH = new Set<number>();
@@ -131,18 +133,20 @@ export default function RoadmapBuilder({
 
       nodes.forEach(n => {
         if (n.id === draggedNode.id) return;
+        const nW = n.measured?.width ?? NODE_WIDTH;
+        const nH = n.measured?.height ?? NODE_HEIGHT;
         const nL = n.position.x;
         const nT = n.position.y;
-        const nCX = nL + NODE_WIDTH / 2;
-        const nCY = nT + NODE_HEIGHT / 2;
-        const nR = nL + NODE_WIDTH;
-        const nB = nT + NODE_HEIGHT;
+        const nCX = nL + nW / 2;
+        const nCY = nT + nH / 2;
+        const nR = nL + nW;
+        const nB = nT + nH;
 
         // Horizontal checks (alinear borde superior, centro Y, borde inferior)
         const hChecks = [
           { drag: dy, ref: nT, guide: nT, snap: nT },
-          { drag: dCY, ref: nCY, guide: nCY, snap: nT },
-          { drag: dB, ref: nB, guide: nB, snap: nB - NODE_HEIGHT },
+          { drag: dCY, ref: nCY, guide: nCY, snap: nCY - dH / 2 },
+          { drag: dB, ref: nB, guide: nB, snap: nB - dH },
         ];
         hChecks.forEach(({ drag, ref, guide, snap }) => {
           if (Math.abs(drag - ref) < SNAP_THRESHOLD && !seenH.has(guide)) {
@@ -158,8 +162,8 @@ export default function RoadmapBuilder({
         // Vertical checks (alinear borde izquierdo, centro X, borde derecho)
         const vChecks = [
           { drag: dx, ref: nL, guide: nL, snap: nL },
-          { drag: dCX, ref: nCX, guide: nCX, snap: nCX - NODE_WIDTH / 2 },
-          { drag: dR, ref: nR, guide: nR, snap: nR - NODE_WIDTH },
+          { drag: dCX, ref: nCX, guide: nCX, snap: nCX - dW / 2 },
+          { drag: dR, ref: nR, guide: nR, snap: nR - dW },
         ];
         vChecks.forEach(({ drag, ref, guide, snap }) => {
           if (Math.abs(drag - ref) < SNAP_THRESHOLD && !seenV.has(guide)) {
@@ -188,7 +192,73 @@ export default function RoadmapBuilder({
     [nodes, setNodes]
   );
 
-  const onNodeDragStop = useCallback(() => setGuides([]), []);
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      setGuides([]);
+      const dW = draggedNode.measured?.width ?? NODE_WIDTH;
+      const dH = draggedNode.measured?.height ?? NODE_HEIGHT;
+      const dx = draggedNode.position.x;
+      const dy = draggedNode.position.y;
+      const dCX = dx + dW / 2;
+      const dCY = dy + dH / 2;
+      const dR = dx + dW;
+      const dB = dy + dH;
+
+      let snapX = dx;
+      let snapY = dy;
+      let snappedH = false;
+      let snappedV = false;
+      const STOP_THRESHOLD = SNAP_THRESHOLD + 4;
+
+      nodes.forEach(n => {
+        if (n.id === draggedNode.id) return;
+        const nW = n.measured?.width ?? NODE_WIDTH;
+        const nH = n.measured?.height ?? NODE_HEIGHT;
+        const nL = n.position.x;
+        const nT = n.position.y;
+        const nCX = nL + nW / 2;
+        const nCY = nT + nH / 2;
+        const nR = nL + nW;
+        const nB = nT + nH;
+
+        if (!snappedH) {
+          if (Math.abs(dy - nT) < STOP_THRESHOLD) {
+            snapY = nT;
+            snappedH = true;
+          } else if (Math.abs(dCY - nCY) < STOP_THRESHOLD) {
+            snapY = nCY - dH / 2;
+            snappedH = true;
+          } else if (Math.abs(dB - nB) < STOP_THRESHOLD) {
+            snapY = nB - dH;
+            snappedH = true;
+          }
+        }
+        if (!snappedV) {
+          if (Math.abs(dx - nL) < STOP_THRESHOLD) {
+            snapX = nL;
+            snappedV = true;
+          } else if (Math.abs(dCX - nCX) < STOP_THRESHOLD) {
+            snapX = nCX - dW / 2;
+            snappedV = true;
+          } else if (Math.abs(dR - nR) < STOP_THRESHOLD) {
+            snapX = nR - dW;
+            snappedV = true;
+          }
+        }
+      });
+
+      if (snappedH || snappedV) {
+        setNodes(nds =>
+          nds.map(n =>
+            n.id === draggedNode.id
+              ? { ...n, position: { x: snapX, y: snapY } }
+              : n
+          )
+        );
+      }
+    },
+    [nodes, setNodes]
+  );
 
   const handleSave = async () => {
     if (!user) {
@@ -418,8 +488,6 @@ export default function RoadmapBuilder({
           }}
           onClose={() => setPickerOpen(false)}
           skills={skills}
-          quests={quests}
-          diaries={diaries}
         />
       )}
     </div>

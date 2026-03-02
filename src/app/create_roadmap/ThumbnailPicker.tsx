@@ -13,19 +13,11 @@ interface Props {
   onSelect: (url: string) => void;
   onClose: () => void;
   skills: { name: string; icon_url: string | null }[];
-  quests: { name: string; icon_url: string | null }[];
-  diaries: { name: string; icon_url: string | null }[];
 }
 
-type Tab = 'items' | 'skills' | 'quests' | 'diaries';
+type Tab = 'items' | 'skills';
 
-export default function ThumbnailPicker({
-  onSelect,
-  onClose,
-  skills,
-  quests,
-  diaries,
-}: Props) {
+export default function ThumbnailPicker({ onSelect, onClose, skills }: Props) {
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<Tab>('items');
   const [search, setSearch] = useState('');
@@ -86,22 +78,13 @@ export default function ThumbnailPicker({
       .map(i => ({ name: i.name, icon_url: i.icon_url! }));
   };
 
-  const staticItems: IconItem[] =
-    tab === 'skills'
-      ? filterList(skills)
-      : tab === 'quests'
-        ? filterList(quests)
-        : tab === 'diaries'
-          ? filterList(diaries)
-          : [];
+  const staticItems: IconItem[] = tab === 'skills' ? filterList(skills) : [];
 
   const displayItems = tab === 'items' ? items : staticItems;
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'items', label: 'Items' },
     { key: 'skills', label: 'Skills', count: skills.length },
-    { key: 'quests', label: 'Quests', count: quests.length },
-    { key: 'diaries', label: 'Diaries', count: diaries.length },
   ];
 
   if (!mounted) return null;
@@ -156,7 +139,7 @@ export default function ThumbnailPicker({
                 margin: 0,
               }}
             >
-              Choose a thumbnail
+              Choose a cover
             </h2>
             <p
               style={{
