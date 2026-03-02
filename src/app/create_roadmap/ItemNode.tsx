@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 
 interface ItemNodeData {
   label: string;
   icon_url: string | null;
   category: string;
   max_level?: number | null;
+  level?: string;
+  qty?: string;
 }
 
 const QUEST_ICON =
@@ -16,28 +18,36 @@ const QUEST_ICON =
 const DIARY_ICON =
   'https://oldschool.runescape.wiki/images/Achievement_Diaries.png';
 
-export default function ItemNode({ data }: { id: string; data: ItemNodeData }) {
+export default function ItemNode({
+  id,
+  data,
+}: {
+  id: string;
+  data: ItemNodeData;
+}) {
+  const { updateNodeData } = useReactFlow();
   const [imgError, setImgError] = useState(false);
-  const [level, setLevel] = useState('');
-  const [qty, setQty] = useState('1');
 
   const isSkill = data.category === 'Skill';
   const isQuest = data.category === 'Quest';
   const isDiary = data.category === 'Diary';
   const isItem = data.category === 'Item';
 
+  const level = data.level ?? '';
+  const qty = data.qty ?? '1';
+
   const handleLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
     const max = data.max_level ?? 99;
     if (val === '' || (Number(val) >= 1 && Number(val) <= max)) {
-      setLevel(val);
+      updateNodeData(id, { level: val });
     }
   };
 
   const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val === '' || Number(val) >= 1) {
-      setQty(val);
+      updateNodeData(id, { qty: val });
     }
   };
 

@@ -31,11 +31,6 @@ export default function ListRoadmapPage() {
                 : "You haven't created any roadmaps yet"}
           </p>
         </div>
-        <Link href="/create_roadmap">
-          <button className="px-4 py-2 rounded-lg bg-amber-500 text-zinc-900 font-semibold text-sm hover:bg-amber-400 transition-colors">
-            + New Roadmap
-          </button>
-        </Link>
       </div>
 
       {/* Loading spinner */}
@@ -83,37 +78,6 @@ export default function ListRoadmapPage() {
               onDeleted={handleDeleted}
             />
           ))}
-          {/* Add new card */}
-          <Link href="/create_roadmap">
-            <div
-              style={{
-                background: 'transparent',
-                border: '2px dashed #3f3f46',
-                borderRadius: '0.875rem',
-                minHeight: '200px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                transition: 'border-color 0.15s',
-              }}
-              onMouseEnter={e =>
-                ((e.currentTarget as HTMLDivElement).style.borderColor =
-                  '#f59e0b')
-              }
-              onMouseLeave={e =>
-                ((e.currentTarget as HTMLDivElement).style.borderColor =
-                  '#3f3f46')
-              }
-            >
-              <span style={{ fontSize: '1.5rem', color: '#52525b' }}>+</span>
-              <span style={{ color: '#52525b', fontSize: '0.75rem' }}>
-                New Roadmap
-              </span>
-            </div>
-          </Link>
         </div>
       )}
     </main>

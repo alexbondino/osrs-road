@@ -19,7 +19,9 @@ export function useMyRoadmaps(userId: string | undefined) {
     setLoading(true);
     const { data } = await supabase
       .from('roadmaps')
-      .select('id, user_id, name, nodes, edges, created_at, updated_at')
+      .select(
+        'id, user_id, name, thumbnail_url, nodes, edges, created_at, updated_at'
+      )
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
     setRoadmaps((data ?? []) as Roadmap[]);
