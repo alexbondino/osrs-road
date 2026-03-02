@@ -50,6 +50,7 @@ export default async function EditRoadmapPage({ params }: Props) {
             initialNodes={roadmap.nodes}
             initialEdges={roadmap.edges}
             initialName={roadmap.name}
+            initialThumbnail={roadmap.thumbnail_url}
             roadmapId={roadmap.id}
           />
         </ReactFlowProvider>

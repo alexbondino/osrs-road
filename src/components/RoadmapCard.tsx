@@ -91,7 +91,7 @@ export default function RoadmapCard({
         style={{ textDecoration: 'none', flex: 1 }}
       >
         <div style={{ padding: '1.25rem', cursor: 'pointer' }}>
-          {/* Preview area — muestra íconos del mapa o placeholder */}
+          {/* Preview area */}
           <div
             style={{
               width: '100%',
@@ -107,7 +107,18 @@ export default function RoadmapCard({
               overflow: 'hidden',
             }}
           >
-            {nodeCount > 0 ? (
+            {roadmap.thumbnail_url ? (
+              <img
+                src={roadmap.thumbnail_url}
+                alt={roadmap.name}
+                style={{
+                  width: '52px',
+                  height: '52px',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                }}
+              />
+            ) : nodeCount > 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <div
                   style={{

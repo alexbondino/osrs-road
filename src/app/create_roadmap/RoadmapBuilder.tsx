@@ -23,6 +23,7 @@ import Sidebar from './Sidebar';
 import type { SidebarItem } from './Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { saveRoadmap, updateRoadmap } from '@/lib/roadmaps';
+import ThumbnailPicker from './ThumbnailPicker';
 
 const NODE_WIDTH = 140;
 const NODE_HEIGHT = 130;
@@ -65,6 +66,7 @@ export default function RoadmapBuilder({
   initialNodes = [],
   initialEdges = [],
   initialName = 'My Roadmap',
+  initialThumbnail = null,
   roadmapId,
 }: {
   skills: Skill[];
@@ -74,6 +76,7 @@ export default function RoadmapBuilder({
   initialNodes?: Node[];
   initialEdges?: Edge[];
   initialName?: string;
+  initialThumbnail?: string | null;
   roadmapId?: string;
 }) {
   const { user } = useAuth();
@@ -83,6 +86,10 @@ export default function RoadmapBuilder({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [roadmapName, setRoadmapName] = useState(initialName);
+  const [thumbnail, setThumbnail] = useState<string | null>(
+    initialThumbnail ?? null
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(
@@ -187,11 +194,17 @@ export default function RoadmapBuilder({
       setSaveMsg({ ok: false, text: 'You must be signed in to save.' });
       return;
     }
+    if (nodes.length === 0) {
+      setSaveMsg({ ok: false, text: 'Add at least one step before saving.' });
+      setTimeout(() => setSaveMsg(null), 3000);
+      return;
+    }
     setSaving(true);
     setSaveMsg(null);
     try {
       const payload = {
         name: roadmapName.trim() || 'My Roadmap',
+        thumbnail_url: thumbnail,
         nodes,
         edges,
       };
@@ -251,7 +264,42 @@ export default function RoadmapBuilder({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-4 px-4 py-2 bg-zinc-900 border-b border-zinc-700 shrink-0">
+      <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-700 shrink-0">
+        {/* Thumbnail button */}
+        <button
+          onClick={() => setPickerOpen(true)}
+          title="Set thumbnail"
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '0.375rem',
+            border: '1px solid',
+            borderColor: thumbnail ? '#f59e0b' : '#3f3f46',
+            background: '#09090b',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            overflow: 'hidden',
+            padding: 0,
+          }}
+        >
+          {thumbnail ? (
+            <img
+              src={thumbnail}
+              alt="thumbnail"
+              style={{
+                width: '26px',
+                height: '26px',
+                objectFit: 'contain',
+                imageRendering: 'pixelated',
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: '0.8rem', color: '#52525b' }}>🖼</span>
+          )}
+        </button>
         <input
           value={roadmapName}
           onChange={e => setRoadmapName(e.target.value)}
@@ -343,6 +391,16 @@ export default function RoadmapBuilder({
           </ReactFlow>
         </div>
       </div>
+
+      {pickerOpen && (
+        <ThumbnailPicker
+          onSelect={url => setThumbnail(url)}
+          onClose={() => setPickerOpen(false)}
+          skills={skills}
+          quests={quests}
+          diaries={diaries}
+        />
+      )}
     </div>
   );
 }

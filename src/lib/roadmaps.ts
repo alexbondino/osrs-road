@@ -6,6 +6,7 @@ export interface Roadmap {
   id: string;
   user_id: string;
   name: string;
+  thumbnail_url: string | null;
   nodes: Node[];
   edges: Edge[];
   created_at: string;
@@ -16,7 +17,9 @@ export interface Roadmap {
 export async function fetchAllRoadmaps(): Promise<Roadmap[]> {
   const { data, error } = await supabase
     .from('roadmaps')
-    .select('id, user_id, name, nodes, edges, created_at, updated_at')
+    .select(
+      'id, user_id, name, thumbnail_url, nodes, edges, created_at, updated_at'
+    )
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Roadmap[];
@@ -26,7 +29,9 @@ export async function fetchAllRoadmaps(): Promise<Roadmap[]> {
 export async function fetchRoadmapById(id: string): Promise<Roadmap | null> {
   const { data, error } = await supabase
     .from('roadmaps')
-    .select('id, user_id, name, nodes, edges, created_at, updated_at')
+    .select(
+      'id, user_id, name, thumbnail_url, nodes, edges, created_at, updated_at'
+    )
     .eq('id', id)
     .single();
   if (error) return null;
@@ -37,6 +42,7 @@ export async function fetchRoadmapById(id: string): Promise<Roadmap | null> {
 export async function saveRoadmap(payload: {
   user_id: string;
   name: string;
+  thumbnail_url?: string | null;
   nodes: Node[];
   edges: Edge[];
 }): Promise<{ id: string } | null> {
@@ -52,7 +58,12 @@ export async function saveRoadmap(payload: {
 // ── Actualizar un roadmap existente ───────────────────────────────────────
 export async function updateRoadmap(
   id: string,
-  payload: { name: string; nodes: Node[]; edges: Edge[] }
+  payload: {
+    name: string;
+    thumbnail_url?: string | null;
+    nodes: Node[];
+    edges: Edge[];
+  }
 ): Promise<void> {
   const { error } = await supabase
     .from('roadmaps')
