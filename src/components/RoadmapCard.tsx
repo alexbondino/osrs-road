@@ -10,6 +10,8 @@ interface Props {
   /** Si es true, muestra botones de editar / eliminar (solo propietario) */
   editable?: boolean;
   onDeleted?: (id: string) => void;
+  /** Si se pasa, muestra botón "Remove from list" (modo seguido) */
+  onUnfollow?: (id: string) => void;
 }
 
 function formatDate(iso: string) {
@@ -24,6 +26,7 @@ export default function RoadmapCard({
   roadmap,
   editable = false,
   onDeleted,
+  onUnfollow,
 }: Props) {
   const [deleting, setDeleting] = useState(false);
   const nodeCount = Array.isArray(roadmap.nodes) ? roadmap.nodes.length : 0;
@@ -280,6 +283,41 @@ export default function RoadmapCard({
             title="Delete roadmap"
           >
             {deleting ? '…' : '🗑'}
+          </button>
+        </div>
+      )}
+
+      {/* Unfollow action (modo seguido) */}
+      {onUnfollow && (
+        <div style={{ padding: '0 1rem 1rem' }}>
+          <button
+            onClick={e => {
+              e.preventDefault();
+              onUnfollow(roadmap.id);
+            }}
+            style={{
+              width: '100%',
+              padding: '0.4rem 0',
+              background: 'transparent',
+              border: '1px solid #3f3f46',
+              borderRadius: '0.5rem',
+              color: '#a1a1aa',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              transition: 'border-color 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                '#ef4444';
+              (e.currentTarget as HTMLButtonElement).style.color = '#ef4444';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                '#3f3f46';
+              (e.currentTarget as HTMLButtonElement).style.color = '#a1a1aa';
+            }}
+          >
+            Remove from list
           </button>
         </div>
       )}

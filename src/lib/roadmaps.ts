@@ -77,3 +77,55 @@ export async function deleteRoadmap(id: string): Promise<void> {
   const { error } = await supabase.from('roadmaps').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ── Follows ───────────────────────────────────────────────────────────────
+export async function followRoadmap(
+  userId: string,
+  roadmapId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('roadmap_follows')
+    .insert({ user_id: userId, roadmap_id: roadmapId });
+  if (error) throw error;
+}
+
+export async function unfollowRoadmap(
+  userId: string,
+  roadmapId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('roadmap_follows')
+    .delete()
+    .eq('user_id', userId)
+    .eq('roadmap_id', roadmapId);
+  if (error) throw error;
+}
+
+export async function checkIsFollowing(
+  userId: string,
+  roadmapId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('roadmap_follows')
+    .select('roadmap_id')
+    .eq('user_id', userId)
+    .eq('roadmap_id', roadmapId)
+    .maybeSingle();
+  return data !== null;
+}
+
+export async function fetchFollowedRoadmaps(
+  userId: string
+): Promise<Roadmap[]> {
+  const { data, error } = await supabase
+    .from('roadmap_follows')
+    .select(
+      'roadmap_id, roadmaps(id, user_id, name, thumbnail_url, nodes, edges, created_at, updated_at)'
+    )
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as { roadmaps: Roadmap }[]).map(
+    row => row.roadmaps
+  );
+}
