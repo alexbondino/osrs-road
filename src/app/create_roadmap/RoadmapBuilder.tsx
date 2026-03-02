@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ReactFlow,
   addEdge,
@@ -20,6 +21,8 @@ import MidpointEdge from './MidpointEdge';
 import AlignmentGuides, { type Guide } from './AlignmentGuides';
 import Sidebar from './Sidebar';
 import type { SidebarItem } from './Sidebar';
+import { useAuth } from '@/hooks/useAuth';
+import { saveRoadmap, updateRoadmap } from '@/lib/roadmaps';
 
 const NODE_WIDTH = 140;
 const NODE_HEIGHT = 130;
@@ -27,9 +30,6 @@ const SNAP_THRESHOLD = 6;
 
 const nodeTypes = { itemNode: ItemNode };
 const edgeTypes = { midpoint: MidpointEdge };
-
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
 
 let idCounter = 1;
 const getId = () => `node_${idCounter++}`;
@@ -62,18 +62,32 @@ export default function RoadmapBuilder({
   quests,
   diaries,
   itemsCount,
+  initialNodes = [],
+  initialEdges = [],
+  initialName = 'My Roadmap',
+  roadmapId,
 }: {
   skills: Skill[];
   quests: Quest[];
   diaries: Diary[];
   itemsCount: number;
+  initialNodes?: Node[];
+  initialEdges?: Edge[];
+  initialName?: string;
+  roadmapId?: string;
 }) {
+  const { user } = useAuth();
+  const router = useRouter();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  const [roadmapName, setRoadmapName] = useState('My Roadmap');
+  const [roadmapName, setRoadmapName] = useState(initialName);
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(
+    null
+  );
 
   const onConnect: OnConnect = useCallback(
     connection =>
@@ -168,6 +182,40 @@ export default function RoadmapBuilder({
 
   const onNodeDragStop = useCallback(() => setGuides([]), []);
 
+  const handleSave = async () => {
+    if (!user) {
+      setSaveMsg({ ok: false, text: 'You must be signed in to save.' });
+      return;
+    }
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const payload = {
+        name: roadmapName.trim() || 'My Roadmap',
+        nodes,
+        edges,
+      };
+      if (roadmapId) {
+        await updateRoadmap(roadmapId, payload);
+        setSaveMsg({ ok: true, text: 'Saved!' });
+        setTimeout(() => setSaveMsg(null), 2500);
+      } else {
+        const result = await saveRoadmap({ ...payload, user_id: user.id });
+        setSaveMsg({ ok: true, text: 'Roadmap saved!' });
+        if (result?.id) {
+          setTimeout(() => router.push(`/roadmap/${result.id}`), 900);
+        }
+      }
+    } catch (err: unknown) {
+      setSaveMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : 'Could not save roadmap.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -213,7 +261,18 @@ export default function RoadmapBuilder({
         <span className="text-zinc-400 text-xs">
           {nodes.length} steps · {edges.length} connections
         </span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex items-center gap-2">
+          {saveMsg && (
+            <span
+              className={`text-xs px-2 py-1 rounded-md ${
+                saveMsg.ok
+                  ? 'bg-green-900/50 text-green-400'
+                  : 'bg-red-900/50 text-red-400'
+              }`}
+            >
+              {saveMsg.text}
+            </span>
+          )}
           <button
             onClick={() => {
               setNodes([]);
@@ -223,8 +282,12 @@ export default function RoadmapBuilder({
           >
             Clear
           </button>
-          <button className="px-3 py-1.5 text-xs rounded-md bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors">
-            Save
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1.5 text-xs rounded-md bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Saving…' : roadmapId ? 'Update' : 'Save'}
           </button>
         </div>
       </div>
