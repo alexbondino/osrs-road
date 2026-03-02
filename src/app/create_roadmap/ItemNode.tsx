@@ -13,13 +13,18 @@ interface ItemNodeData {
 
 const QUEST_ICON =
   'https://oldschool.runescape.wiki/images/Quest_point_icon.png';
+const DIARY_ICON =
+  'https://oldschool.runescape.wiki/images/Achievement_Diaries.png';
 
-export default function ItemNode({ data }: { data: ItemNodeData }) {
+export default function ItemNode({ data }: { id: string; data: ItemNodeData }) {
   const [imgError, setImgError] = useState(false);
   const [level, setLevel] = useState('');
+  const [qty, setQty] = useState('1');
 
   const isSkill = data.category === 'Skill';
   const isQuest = data.category === 'Quest';
+  const isDiary = data.category === 'Diary';
+  const isItem = data.category === 'Item';
 
   const handleLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
@@ -29,12 +34,19 @@ export default function ItemNode({ data }: { data: ItemNodeData }) {
     }
   };
 
-  const iconSrc = isQuest ? QUEST_ICON : data.icon_url;
+  const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '');
+    if (val === '' || Number(val) >= 1) {
+      setQty(val);
+    }
+  };
+
+  const iconSrc = isQuest ? QUEST_ICON : isDiary ? DIARY_ICON : data.icon_url;
   const showFallback = !iconSrc || imgError;
 
   return (
     <div
-      className="bg-zinc-800 border-2 border-zinc-600 rounded-xl shadow-xl hover:border-amber-500 transition-colors"
+      className="relative bg-zinc-800 border-2 border-zinc-600 rounded-xl shadow-xl hover:border-amber-500 transition-colors"
       style={{ width: 140, height: 130 }}
     >
       <Handle
@@ -68,7 +80,7 @@ export default function ItemNode({ data }: { data: ItemNodeData }) {
           {data.label}
         </div>
 
-        {/* Categoría o input level */}
+        {/* Categoría, input level o input qty */}
         {isSkill ? (
           <div className="flex items-center gap-1">
             <span className="text-zinc-400 text-[10px]">Lvl</span>
@@ -82,6 +94,19 @@ export default function ItemNode({ data }: { data: ItemNodeData }) {
               className={`nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none transition-colors ${
                 level === '' ? 'ring-1 ring-red-500' : 'ring-1 ring-amber-500'
               }`}
+            />
+          </div>
+        ) : isItem ? (
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-400 text-[10px]">Qty</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={qty}
+              onChange={handleQtyChange}
+              maxLength={4}
+              style={{ width: '2rem' }}
+              className="nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none ring-1 ring-amber-500 transition-colors"
             />
           </div>
         ) : (

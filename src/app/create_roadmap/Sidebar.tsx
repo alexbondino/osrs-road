@@ -8,7 +8,7 @@ export interface SidebarItem {
   id: number;
   name: string;
   icon_url: string | null;
-  category: 'Skill' | 'Item' | 'Quest';
+  category: 'Skill' | 'Item' | 'Quest' | 'Diary';
   max_level?: number;
 }
 
@@ -25,6 +25,14 @@ interface Quest {
   icon_url: string | null;
   difficulty: string | null;
   members: boolean;
+}
+
+interface Diary {
+  id: number;
+  name: string;
+  area: string | null;
+  tier: string | null;
+  icon_url: string | null;
 }
 
 function ItemIcon({ url, name }: { url: string | null; name: string }) {
@@ -67,7 +75,7 @@ function DraggableItem({ item }: { item: SidebarItem }) {
       onDragStart={onDragStart}
       className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-zinc-700 hover:bg-zinc-600 cursor-grab active:cursor-grabbing border border-zinc-600 hover:border-amber-500 transition-colors select-none min-w-0"
     >
-      {item.category !== 'Quest' && (
+      {item.category !== 'Quest' && item.category !== 'Diary' && (
         <ItemIcon url={item.icon_url} name={item.name} />
       )}
       <span className="text-white text-xs font-medium truncate min-w-0">
@@ -80,16 +88,20 @@ function DraggableItem({ item }: { item: SidebarItem }) {
 export default function Sidebar({
   skills,
   quests,
+  diaries,
   itemsCount,
 }: {
   skills: Skill[];
   quests: Quest[];
+  diaries: Diary[];
   itemsCount: number;
 }) {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<SidebarItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'skills' | 'quests' | 'items'>('skills');
+  const [tab, setTab] = useState<'skills' | 'quests' | 'diaries' | 'items'>(
+    'skills'
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -134,9 +146,20 @@ export default function Sidebar({
     category: 'Quest',
   }));
 
+  const diaryItems: SidebarItem[] = diaries.map(d => ({
+    id: d.id,
+    name: d.name,
+    icon_url: d.icon_url,
+    category: 'Diary',
+  }));
+
   const TABS = [
     { key: 'skills' as const, label: `Skills (${formatCount(skills.length)})` },
     { key: 'quests' as const, label: `Quests (${formatCount(quests.length)})` },
+    {
+      key: 'diaries' as const,
+      label: `Diaries (${formatCount(diaries.length)})`,
+    },
     { key: 'items' as const, label: `Items (${formatCount(itemsCount)})` },
   ];
 
@@ -181,6 +204,8 @@ export default function Sidebar({
           skillItems.map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'quests' &&
           questItems.map(item => <DraggableItem key={item.id} item={item} />)}
+        {tab === 'diaries' &&
+          diaryItems.map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'items' && query.length < 2 && (
           <p className="text-zinc-500 text-xs text-center mt-6 px-4">
             Escribe al menos 2 caracteres para buscar items

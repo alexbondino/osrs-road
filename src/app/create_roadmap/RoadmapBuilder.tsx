@@ -16,10 +16,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import ItemNode from './ItemNode';
+import MidpointEdge from './MidpointEdge';
 import Sidebar from './Sidebar';
 import type { SidebarItem } from './Sidebar';
 
 const nodeTypes = { itemNode: ItemNode };
+const edgeTypes = { midpoint: MidpointEdge };
 
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
@@ -42,13 +44,23 @@ interface Quest {
   members: boolean;
 }
 
+interface Diary {
+  id: number;
+  name: string;
+  area: string | null;
+  tier: string | null;
+  icon_url: string | null;
+}
+
 export default function RoadmapBuilder({
   skills,
   quests,
+  diaries,
   itemsCount,
 }: {
   skills: Skill[];
   quests: Quest[];
+  diaries: Diary[];
   itemsCount: number;
 }) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -63,8 +75,7 @@ export default function RoadmapBuilder({
         addEdge(
           {
             ...connection,
-            animated: true,
-            style: { stroke: '#f59e0b', strokeWidth: 2 },
+            type: 'midpoint',
           },
           eds
         )
@@ -135,7 +146,12 @@ export default function RoadmapBuilder({
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar skills={skills} quests={quests} itemsCount={itemsCount} />
+        <Sidebar
+          skills={skills}
+          quests={quests}
+          diaries={diaries}
+          itemsCount={itemsCount}
+        />
 
         {/* Canvas */}
         <div ref={reactFlowWrapper} className="flex-1 bg-zinc-950">
@@ -149,8 +165,9 @@ export default function RoadmapBuilder({
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
-            deleteKeyCode="Delete"
+            deleteKeyCode={['Backspace', 'Delete']}
           >
             <Controls className="[&>button]:bg-zinc-800 [&>button]:border-zinc-600 [&>button]:text-white" />
             <Background
