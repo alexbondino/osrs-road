@@ -27,7 +27,14 @@ const initialEdges: Edge[] = [];
 let idCounter = 1;
 const getId = () => `node_${idCounter++}`;
 
-export default function RoadmapBuilder() {
+interface Skill {
+  id: number;
+  name: string;
+  icon_url: string | null;
+  max_level: number;
+}
+
+export default function RoadmapBuilder({ skills }: { skills: Skill[] }) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -69,7 +76,11 @@ export default function RoadmapBuilder() {
         id: getId(),
         type: 'itemNode',
         position,
-        data: { label: item.label, emoji: item.emoji, category: item.category },
+        data: {
+          label: item.name,
+          icon_url: item.icon_url,
+          category: item.category,
+        },
       };
       setNodes(nds => nds.concat(newNode));
     },
@@ -107,7 +118,7 @@ export default function RoadmapBuilder() {
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar skills={skills} />
 
         {/* Canvas */}
         <div ref={reactFlowWrapper} className="flex-1 bg-zinc-950">
