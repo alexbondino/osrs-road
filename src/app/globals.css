@@ -6,6 +6,22 @@
   }
 }
 
+@keyframes border-blink {
+  0%,
+  100% {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px #ef4444;
+  }
+  50% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.thumb-error-blink {
+  animation: border-blink 0.7s ease-in-out 4;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

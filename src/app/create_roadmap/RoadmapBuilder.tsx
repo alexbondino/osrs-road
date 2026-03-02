@@ -90,6 +90,7 @@ export default function RoadmapBuilder({
     initialThumbnail ?? null
   );
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [thumbErrorKey, setThumbErrorKey] = useState(0);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(
@@ -200,7 +201,11 @@ export default function RoadmapBuilder({
       return;
     }
     if (!thumbnail) {
-      setSaveMsg({ ok: false, text: 'Choose a thumbnail image before saving.' });
+      setThumbErrorKey(k => k + 1);
+      setSaveMsg({
+        ok: false,
+        text: 'Choose a cover image before saving.',
+      });
       setTimeout(() => setSaveMsg(null), 3000);
       return;
     }
@@ -272,14 +277,22 @@ export default function RoadmapBuilder({
       <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-700 shrink-0">
         {/* Thumbnail button */}
         <button
+          key={thumbErrorKey}
           onClick={() => setPickerOpen(true)}
           title="Set thumbnail"
+          className={
+            thumbErrorKey > 0 && !thumbnail ? 'thumb-error-blink' : undefined
+          }
           style={{
             width: '32px',
             height: '32px',
             borderRadius: '0.375rem',
             border: '1px solid',
-            borderColor: thumbnail ? '#f59e0b' : '#ef4444',
+            borderColor: thumbnail
+              ? '#f59e0b'
+              : thumbErrorKey > 0
+                ? '#ef4444'
+                : '#3f3f46',
             background: '#09090b',
             cursor: 'pointer',
             display: 'flex',
@@ -399,7 +412,10 @@ export default function RoadmapBuilder({
 
       {pickerOpen && (
         <ThumbnailPicker
-          onSelect={url => setThumbnail(url)}
+          onSelect={url => {
+            setThumbnail(url);
+            setThumbErrorKey(0);
+          }}
           onClose={() => setPickerOpen(false)}
           skills={skills}
           quests={quests}
