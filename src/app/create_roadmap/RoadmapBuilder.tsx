@@ -96,6 +96,7 @@ export default function RoadmapBuilder({
           label: item.name,
           icon_url: item.icon_url,
           category: item.category,
+          max_level: item.max_level ?? null,
         },
       };
       setNodes(nds => nds.concat(newNode));

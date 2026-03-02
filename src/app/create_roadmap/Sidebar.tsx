@@ -9,6 +9,7 @@ export interface SidebarItem {
   name: string;
   icon_url: string | null;
   category: 'Skill' | 'Item' | 'Quest';
+  max_level?: number;
 }
 
 interface Skill {
@@ -123,6 +124,7 @@ export default function Sidebar({
     name: s.name,
     icon_url: s.icon_url,
     category: 'Skill',
+    max_level: s.max_level,
   }));
 
   const questItems: SidebarItem[] = quests.map(q => ({
