@@ -371,6 +371,173 @@ def sync_skills(sb: Client) -> None:
     log(f"  ✓ {len(new_skills)} skills insertados")
 
 
+_DIARY_ICON = "https://oldschool.runescape.wiki/images/Achievement_Diaries.png"
+
+def u(name, _sub, icon):
+    """Item no tradeable — va a la tabla items con tradeable=False."""
+    return {"name": name, "icon_url": f"{OSRS_WIKI_ICON_BASE}/{icon}"}
+
+OSRS_UNLOCKS = [
+    # ── Combat Achievements ──────────────────────────────────────────────────
+    u("Combat Achievements: Easy",        "Combat Achievement", "Combat_achievement_icon.png"),
+    u("Combat Achievements: Medium",      "Combat Achievement", "Combat_achievement_icon.png"),
+    u("Combat Achievements: Hard",        "Combat Achievement", "Combat_achievement_icon.png"),
+    u("Combat Achievements: Elite",       "Combat Achievement", "Combat_achievement_icon.png"),
+    u("Combat Achievements: Master",      "Combat Achievement", "Combat_achievement_icon.png"),
+    u("Combat Achievements: Grandmaster", "Combat Achievement", "Combat_achievement_icon.png"),
+    # ── Capes ────────────────────────────────────────────────────────────────
+    u("Fire Cape",          "Cape", "Fire_cape.png"),
+    u("Infernal Cape",      "Cape", "Infernal_cape.png"),
+    u("Cape of Accomplishment", "Cape", "Achievement_diary_cape.png"),
+    u("Max Cape",           "Cape", "Max_cape.png"),
+    u("Mythical Cape",      "Cape", "Mythical_cape.png"),
+    u("Imbued Saradomin Cape",  "Cape", "Imbued_saradomin_cape.png"),
+    u("Imbued Guthix Cape",     "Cape", "Imbued_guthix_cape.png"),
+    u("Imbued Zamorak Cape",    "Cape", "Imbued_zamorak_cape.png"),
+    # ── Defenders ────────────────────────────────────────────────────────────
+    u("Dragon Defender",    "Defender", "Dragon_defender.png"),
+    u("Avernic Defender",   "Defender", "Avernic_defender.png"),
+    u("Crystal Shield",     "Defender", "Crystal_shield.png"),
+    # ── Gloves ───────────────────────────────────────────────────────────────
+    u("Barrows Gloves",     "Gloves", "Barrows_gloves.png"),
+    u("Ferocious Gloves",   "Gloves", "Ferocious_gloves.png"),
+    # ── Helmets / Head ───────────────────────────────────────────────────────
+    u("Slayer Helmet (i)",  "Helm", "Slayer_helmet_%28i%29.png"),
+    u("Neitiznot Faceguard","Helm", "Neitiznot_faceguard.png"),
+    u("Serpentine Helm",    "Helm", "Serpentine_helm.png"),
+    # ── Void Knight ──────────────────────────────────────────────────────────
+    u("Void Knight Top",    "Void", "Void_knight_top.png"),
+    u("Void Knight Robe",   "Void", "Void_knight_robe.png"),
+    u("Void Knight Gloves", "Void", "Void_knight_gloves.png"),
+    u("Void Melee Helm",    "Void", "Void_melee_helm.png"),
+    u("Void Mage Helm",     "Void", "Void_mage_helm.png"),
+    u("Void Ranger Helm",   "Void", "Void_ranger_helm.png"),
+    u("Elite Void Top",     "Void", "Elite_void_top.png"),
+    u("Elite Void Robe",    "Void", "Elite_void_robe.png"),
+    # ── Barbarian Assault ────────────────────────────────────────────────────
+    u("Fighter Torso",      "Minigame", "Fighter_torso.png"),
+    u("Fighter Hat",        "Minigame", "Fighter_hat.png"),
+    u("Ranger Hat",         "Minigame", "Ranger_hat.png"),
+    u("Healer Hat",         "Minigame", "Healer_hat.png"),
+    u("Runner Hat",         "Minigame", "Runner_hat.png"),
+    # ── Diary rewards ────────────────────────────────────────────────────────
+    u("Ardougne Cloak 1",        "Diary Reward", "Ardougne_cloak_1.png"),
+    u("Ardougne Cloak 2",        "Diary Reward", "Ardougne_cloak_2.png"),
+    u("Ardougne Cloak 3",        "Diary Reward", "Ardougne_cloak_3.png"),
+    u("Ardougne Cloak 4",        "Diary Reward", "Ardougne_cloak_4.png"),
+    u("Explorer's Ring 1",       "Diary Reward", "Explorer%27s_ring_1.png"),
+    u("Explorer's Ring 2",       "Diary Reward", "Explorer%27s_ring_2.png"),
+    u("Explorer's Ring 3",       "Diary Reward", "Explorer%27s_ring_3.png"),
+    u("Explorer's Ring 4",       "Diary Reward", "Explorer%27s_ring_4.png"),
+    u("Falador Shield 1",        "Diary Reward", "Falador_shield_1.png"),
+    u("Falador Shield 2",        "Diary Reward", "Falador_shield_2.png"),
+    u("Falador Shield 3",        "Diary Reward", "Falador_shield_3.png"),
+    u("Falador Shield 4",        "Diary Reward", "Falador_shield_4.png"),
+    u("Fremennik Sea Boots 1",   "Diary Reward", "Fremennik_sea_boots_1.png"),
+    u("Fremennik Sea Boots 2",   "Diary Reward", "Fremennik_sea_boots_2.png"),
+    u("Fremennik Sea Boots 3",   "Diary Reward", "Fremennik_sea_boots_3.png"),
+    u("Fremennik Sea Boots 4",   "Diary Reward", "Fremennik_sea_boots_4.png"),
+    u("Kandarin Headgear 1",     "Diary Reward", "Kandarin_headgear_1.png"),
+    u("Kandarin Headgear 2",     "Diary Reward", "Kandarin_headgear_2.png"),
+    u("Kandarin Headgear 3",     "Diary Reward", "Kandarin_headgear_3.png"),
+    u("Kandarin Headgear 4",     "Diary Reward", "Kandarin_headgear_4.png"),
+    u("Karamja Gloves 1",        "Diary Reward", "Karamja_gloves_1.png"),
+    u("Karamja Gloves 2",        "Diary Reward", "Karamja_gloves_2.png"),
+    u("Karamja Gloves 3",        "Diary Reward", "Karamja_gloves_3.png"),
+    u("Karamja Gloves 4",        "Diary Reward", "Karamja_gloves_4.png"),
+    u("Morytania Legs 1",        "Diary Reward", "Morytania_legs_1.png"),
+    u("Morytania Legs 2",        "Diary Reward", "Morytania_legs_2.png"),
+    u("Morytania Legs 3",        "Diary Reward", "Morytania_legs_3.png"),
+    u("Morytania Legs 4",        "Diary Reward", "Morytania_legs_4.png"),
+    u("Desert Amulet 1",         "Diary Reward", "Desert_amulet_1.png"),
+    u("Desert Amulet 2",         "Diary Reward", "Desert_amulet_2.png"),
+    u("Desert Amulet 3",         "Diary Reward", "Desert_amulet_3.png"),
+    u("Desert Amulet 4",         "Diary Reward", "Desert_amulet_4.png"),
+    u("Western Banner 1",        "Diary Reward", "Western_banner_1.png"),
+    u("Western Banner 2",        "Diary Reward", "Western_banner_2.png"),
+    u("Western Banner 3",        "Diary Reward", "Western_banner_3.png"),
+    u("Western Banner 4",        "Diary Reward", "Western_banner_4.png"),
+    u("Varrock Armour 1",        "Diary Reward", "Varrock_armour_1.png"),
+    u("Varrock Armour 2",        "Diary Reward", "Varrock_armour_2.png"),
+    u("Varrock Armour 3",        "Diary Reward", "Varrock_armour_3.png"),
+    u("Varrock Armour 4",        "Diary Reward", "Varrock_armour_4.png"),
+    u("Wilderness Sword 1",      "Diary Reward", "Wilderness_sword_1.png"),
+    u("Wilderness Sword 2",      "Diary Reward", "Wilderness_sword_2.png"),
+    u("Wilderness Sword 3",      "Diary Reward", "Wilderness_sword_3.png"),
+    u("Wilderness Sword 4",      "Diary Reward", "Wilderness_sword_4.png"),
+    u("Ghommal's Hilt 1",        "Diary Reward", "Ghommal%27s_hilt_1.png"),
+    u("Ghommal's Hilt 2",        "Diary Reward", "Ghommal%27s_hilt_2.png"),
+    u("Ghommal's Hilt 3",        "Diary Reward", "Ghommal%27s_hilt_3.png"),
+    u("Ghommal's Hilt 4",        "Diary Reward", "Ghommal%27s_hilt_4.png"),
+    u("Ghommal's Hilt 5",        "Diary Reward", "Ghommal%27s_hilt_5.png"),
+    u("Ghommal's Hilt 6",        "Diary Reward", "Ghommal%27s_hilt_6.png"),
+    # ── Other key unlocks ─────────────────────────────────────────────────────
+    u("Ava's Assembler",         "Ranged",  "Ava%27s_assembler.png"),
+    u("Twisted Ancestral Hat",   "Cosmetic", "Twisted_ancestral_hat.png"),
+    u("Chambers of Xeric KC",    "Raids",    "Olmlet.png"),
+    u("Theatre of Blood KC",     "Raids",    "Lil%27_zik.png"),
+    u("Tombs of Amascut KC",     "Raids",    "Tumeken%27s_guardian.png"),
+]
+
+def d(area, tier):
+    return {"name": f"{area} {tier}", "area": area, "tier": tier, "icon_url": _DIARY_ICON}
+
+OSRS_DIARIES = [
+    d("Ardougne",           "Easy"),   d("Ardougne",           "Medium"), d("Ardougne",           "Hard"),   d("Ardougne",           "Elite"),
+    d("Desert",             "Easy"),   d("Desert",             "Medium"), d("Desert",             "Hard"),   d("Desert",             "Elite"),
+    d("Falador",            "Easy"),   d("Falador",            "Medium"), d("Falador",            "Hard"),   d("Falador",            "Elite"),
+    d("Fremennik",          "Easy"),   d("Fremennik",          "Medium"), d("Fremennik",          "Hard"),   d("Fremennik",          "Elite"),
+    d("Kandarin",           "Easy"),   d("Kandarin",           "Medium"), d("Kandarin",           "Hard"),   d("Kandarin",           "Elite"),
+    d("Karamja",            "Easy"),   d("Karamja",            "Medium"), d("Karamja",            "Hard"),   d("Karamja",            "Elite"),
+    d("Kourend & Kebos",    "Easy"),   d("Kourend & Kebos",    "Medium"), d("Kourend & Kebos",    "Hard"),   d("Kourend & Kebos",    "Elite"),
+    d("Lumbridge & Draynor","Easy"),   d("Lumbridge & Draynor","Medium"), d("Lumbridge & Draynor","Hard"),   d("Lumbridge & Draynor","Elite"),
+    d("Morytania",          "Easy"),   d("Morytania",          "Medium"), d("Morytania",          "Hard"),   d("Morytania",          "Elite"),
+    d("Tirannwn",           "Easy"),   d("Tirannwn",           "Medium"), d("Tirannwn",           "Hard"),   d("Tirannwn",           "Elite"),
+    d("Varrock",            "Easy"),   d("Varrock",            "Medium"), d("Varrock",            "Hard"),   d("Varrock",            "Elite"),
+    d("Western Provinces",  "Easy"),   d("Western Provinces",  "Medium"), d("Western Provinces",  "Hard"),   d("Western Provinces",  "Elite"),
+    d("Wilderness",         "Easy"),   d("Wilderness",         "Medium"), d("Wilderness",         "Hard"),   d("Wilderness",         "Elite"),
+]
+
+
+def sync_untradeable_items(sb: Client) -> None:
+    log("Sincronizando items no tradeables (unlocks)...")
+    existing_names = {r["name"] for r in sb.table("items").select("name").eq("tradeable", False).execute().data}
+    existing_ids   = {r["id"]   for r in sb.table("items").select("id").gte("id", 90001).execute().data}
+
+    new_items: list[dict] = []
+    next_id = 90001
+    for item in OSRS_UNLOCKS:
+        if item["name"] not in existing_names:
+            while next_id in existing_ids:
+                next_id += 1
+            new_items.append({
+                "id":        next_id,
+                "name":      item["name"],
+                "icon_url":  item["icon_url"],
+                "tradeable": False,
+                "members":   False,
+            })
+            existing_ids.add(next_id)
+            next_id += 1
+
+    if not new_items:
+        log(f"  ✓ Los {len(OSRS_UNLOCKS)} unlocks ya existen en items, nada que hacer")
+        return
+    sb.table("items").insert(new_items).execute()
+    log(f"  ✓ {len(new_items)} unlocks insertados en items ({len(OSRS_UNLOCKS)} total)")
+
+
+def sync_diaries(sb: Client) -> None:
+    log("Sincronizando diaries...")
+    existing = {r["name"] for r in sb.table("diaries").select("name").execute().data}
+    new_diaries = [item for item in OSRS_DIARIES if item["name"] not in existing]
+    if not new_diaries:
+        log(f"  ✓ Los {len(OSRS_DIARIES)} diaries ya existen, nada que hacer")
+        return
+    sb.table("diaries").insert(new_diaries).execute()
+    log(f"  ✓ {len(new_diaries)} diaries insertados ({len(OSRS_DIARIES)} total)")
+
+
 def sync_quests(sb: Client) -> None:
     log("Sincronizando quests...")
     existing = {r["name"] for r in sb.table("quests").select("name").execute().data}
@@ -404,6 +571,8 @@ def main() -> None:
     sync_items(sb, raw_items)
     sync_skills(sb)
     sync_quests(sb)
+    sync_diaries(sb)
+    sync_untradeable_items(sb)
 
     log("=== Sincronización completada ✓ ===")
 
