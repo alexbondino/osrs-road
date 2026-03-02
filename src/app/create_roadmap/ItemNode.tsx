@@ -11,6 +11,7 @@ interface ItemNodeData {
   max_level?: number | null;
   level?: string;
   qty?: string;
+  completed?: boolean;
 }
 
 const QUEST_ICON =
@@ -32,6 +33,7 @@ export default function ItemNode({
   const isQuest = data.category === 'Quest';
   const isDiary = data.category === 'Diary';
   const isItem = data.category === 'Item';
+  const completed = data.completed ?? false;
 
   const level = data.level ?? '';
   const qty = data.qty ?? '1';
@@ -56,13 +58,31 @@ export default function ItemNode({
 
   return (
     <div
-      className="relative bg-zinc-800 border-2 border-zinc-600 rounded-xl shadow-xl hover:border-amber-500 transition-colors"
+      className={`relative border-2 rounded-xl shadow-xl transition-colors ${
+        completed
+          ? 'bg-amber-950 border-amber-500 shadow-amber-900/40'
+          : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
+      }`}
       style={{ width: 140, height: 130 }}
     >
+      {completed && (
+        <div
+          className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"
+          style={{
+            fontSize: '9px',
+            lineHeight: 1,
+            color: '#1c1917',
+            fontWeight: 700,
+            zIndex: 10,
+          }}
+        >
+          ✓
+        </div>
+      )}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3 !h-3 !bg-amber-500 !border-2 !border-amber-300"
+        className="w-3! h-3! bg-amber-500! border-2! border-amber-300!"
       />
 
       <div className="flex flex-col items-center justify-between h-full py-3 px-2">
@@ -129,7 +149,7 @@ export default function ItemNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-3 !h-3 !bg-amber-500 !border-2 !border-amber-300"
+        className="w-3! h-3! bg-amber-500! border-2! border-amber-300!"
       />
     </div>
   );

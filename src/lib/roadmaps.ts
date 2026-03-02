@@ -129,3 +129,36 @@ export async function fetchFollowedRoadmaps(
     row => row.roadmaps
   );
 }
+
+// ── Progreso de nodos completados ───────────────────────────────────────
+export async function fetchProgress(
+  userId: string,
+  roadmapId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('roadmap_progress')
+    .select('completed_nodes')
+    .eq('user_id', userId)
+    .eq('roadmap_id', roadmapId)
+    .maybeSingle();
+  return (data?.completed_nodes as string[]) ?? [];
+}
+
+export async function saveProgress(
+  userId: string,
+  roadmapId: string,
+  completedNodes: string[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('roadmap_progress')
+    .upsert(
+      {
+        user_id: userId,
+        roadmap_id: roadmapId,
+        completed_nodes: completedNodes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,roadmap_id' }
+    );
+  if (error) throw error;
+}
