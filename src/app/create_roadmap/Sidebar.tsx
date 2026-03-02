@@ -193,7 +193,7 @@ export default function Sidebar({
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar item..."
+            placeholder="Search item..."
             className="w-full bg-zinc-800 text-white text-xs px-3 py-2 rounded-md border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-500"
           />
         </div>
@@ -208,19 +208,17 @@ export default function Sidebar({
           diaryItems.map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'items' && query.length < 2 && (
           <p className="text-zinc-500 text-xs text-center mt-6 px-4">
-            Escribe al menos 2 caracteres para buscar items
+            Type at least 2 characters to search items
           </p>
         )}
         {tab === 'items' && loading && (
-          <p className="text-zinc-400 text-xs text-center mt-6">Buscando...</p>
+          <p className="text-zinc-400 text-xs text-center mt-6">Searching...</p>
         )}
         {tab === 'items' &&
           !loading &&
           query.length >= 2 &&
           items.length === 0 && (
-            <p className="text-zinc-500 text-xs text-center mt-6">
-              Sin resultados
-            </p>
+            <p className="text-zinc-500 text-xs text-center mt-6">No results</p>
           )}
         {tab === 'items' &&
           !loading &&

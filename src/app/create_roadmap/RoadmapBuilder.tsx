@@ -72,7 +72,7 @@ export default function RoadmapBuilder({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  const [roadmapName, setRoadmapName] = useState('Mi Roadmap');
+  const [roadmapName, setRoadmapName] = useState('My Roadmap');
   const [guides, setGuides] = useState<Guide[]>([]);
 
   const onConnect: OnConnect = useCallback(
@@ -208,10 +208,10 @@ export default function RoadmapBuilder({
           value={roadmapName}
           onChange={e => setRoadmapName(e.target.value)}
           className="bg-zinc-800 text-white text-sm font-semibold px-3 py-1.5 rounded-md border border-zinc-600 focus:outline-none focus:border-amber-500 w-56"
-          placeholder="Nombre del roadmap"
+          placeholder="Roadmap name"
         />
         <span className="text-zinc-400 text-xs">
-          {nodes.length} pasos · {edges.length} conexiones
+          {nodes.length} steps · {edges.length} connections
         </span>
         <div className="ml-auto flex gap-2">
           <button
@@ -221,10 +221,10 @@ export default function RoadmapBuilder({
             }}
             className="px-3 py-1.5 text-xs rounded-md border border-zinc-600 text-zinc-300 hover:bg-zinc-700 transition-colors"
           >
-            Limpiar
+            Clear
           </button>
           <button className="px-3 py-1.5 text-xs rounded-md bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors">
-            Guardar
+            Save
           </button>
         </div>
       </div>
@@ -269,10 +269,10 @@ export default function RoadmapBuilder({
                 <div className="text-center">
                   <div className="text-4xl mb-3">🗺️</div>
                   <p className="text-zinc-500 text-sm">
-                    Arrastra items desde el panel izquierdo
+                    Drag items from the left panel
                   </p>
                   <p className="text-zinc-600 text-xs mt-1">
-                    Conecta los nodos arrastrando desde sus bordes
+                    Connect nodes by dragging from their edges
                   </p>
                 </div>
               </div>
