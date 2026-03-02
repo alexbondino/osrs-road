@@ -29,12 +29,24 @@ CREATE TABLE IF NOT EXISTS public.skills (
   max_level INTEGER NOT NULL DEFAULT 99
 );
 
+-- ── Quests ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.quests (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT UNIQUE NOT NULL,
+  difficulty TEXT,          -- Novice, Intermediate, Experienced, Master, Grandmaster
+  members    BOOLEAN NOT NULL DEFAULT FALSE,
+  series     TEXT,
+  icon_url   TEXT
+);
+
 -- =========================================================
 -- Habilitar Row Level Security (recomendado)
 -- =========================================================
 ALTER TABLE public.items  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quests ENABLE ROW LEVEL SECURITY;
 
 -- Política: lectura pública, escritura solo con service_role
 CREATE POLICY "read_items_public"  ON public.items  FOR SELECT USING (true);
 CREATE POLICY "read_skills_public" ON public.skills FOR SELECT USING (true);
+CREATE POLICY "read_quests_public" ON public.quests FOR SELECT USING (true);

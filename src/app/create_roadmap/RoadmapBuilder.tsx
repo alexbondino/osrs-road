@@ -34,7 +34,23 @@ interface Skill {
   max_level: number;
 }
 
-export default function RoadmapBuilder({ skills }: { skills: Skill[] }) {
+interface Quest {
+  id: number;
+  name: string;
+  icon_url: string | null;
+  difficulty: string | null;
+  members: boolean;
+}
+
+export default function RoadmapBuilder({
+  skills,
+  quests,
+  itemsCount,
+}: {
+  skills: Skill[];
+  quests: Quest[];
+  itemsCount: number;
+}) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -118,7 +134,7 @@ export default function RoadmapBuilder({ skills }: { skills: Skill[] }) {
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar skills={skills} />
+        <Sidebar skills={skills} quests={quests} itemsCount={itemsCount} />
 
         {/* Canvas */}
         <div ref={reactFlowWrapper} className="flex-1 bg-zinc-950">

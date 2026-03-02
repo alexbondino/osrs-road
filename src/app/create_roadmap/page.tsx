@@ -3,15 +3,27 @@ import RoadmapBuilder from './RoadmapBuilder';
 import { supabase } from '@/lib/supabase';
 
 export default async function CreateRoadmapPage() {
-  const { data: skills } = await supabase
-    .from('skills')
-    .select('id, name, icon_url, max_level')
-    .order('name');
+  const [{ data: skills }, { data: quests }, { count: itemsCount }] =
+    await Promise.all([
+      supabase
+        .from('skills')
+        .select('id, name, icon_url, max_level')
+        .order('name'),
+      supabase
+        .from('quests')
+        .select('id, name, icon_url, difficulty, members')
+        .order('name'),
+      supabase.from('items').select('id', { count: 'exact', head: true }),
+    ]);
 
   return (
     <div className="h-[calc(100vh-49px)] bg-zinc-950">
       <ReactFlowProvider>
-        <RoadmapBuilder skills={skills ?? []} />
+        <RoadmapBuilder
+          skills={skills ?? []}
+          quests={quests ?? []}
+          itemsCount={itemsCount ?? 0}
+        />
       </ReactFlowProvider>
     </div>
   );

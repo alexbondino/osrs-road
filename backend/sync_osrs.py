@@ -71,6 +71,166 @@ OSRS_SKILLS = [
     {"name": "Hunter",        "icon_url": f"{OSRS_WIKI_ICON_BASE}/Hunter_icon.png",        "max_level": 99},
 ]
 
+# ── Quests estáticos de OSRS ──────────────────────────────────────────────────
+# difficulty: Novice | Intermediate | Experienced | Master | Grandmaster | Special
+# icon_url usa la imagen de dificultad del wiki
+
+_D = {
+    "Nov": f"{OSRS_WIKI_ICON_BASE}/Quest_difficulty_novice.png",
+    "Int": f"{OSRS_WIKI_ICON_BASE}/Quest_difficulty_intermediate.png",
+    "Exp": f"{OSRS_WIKI_ICON_BASE}/Quest_difficulty_experienced.png",
+    "Mas": f"{OSRS_WIKI_ICON_BASE}/Quest_difficulty_master.png",
+    "GM":  f"{OSRS_WIKI_ICON_BASE}/Quest_difficulty_grandmaster.png",
+    "Spe": f"{OSRS_WIKI_ICON_BASE}/Miniquest_icon.png",
+}
+
+def q(name, diff, members, series=None):
+    return {"name": name, "difficulty": diff, "members": members,
+            "series": series, "icon_url": _D.get(diff[:3], _D["Nov"])}
+
+OSRS_QUESTS = [
+    # ── Free quests ──────────────────────────────────────────────────────────
+    q("Cook's Assistant",                      "Novice",       False),
+    q("The Restless Ghost",                    "Novice",       False),
+    q("Romeo & Juliet",                        "Novice",       False),
+    q("Sheep Shearer",                         "Novice",       False),
+    q("Ernest the Chicken",                    "Novice",       False),
+    q("Goblin Diplomacy",                      "Novice",       False),
+    q("Pirates' Treasure",                     "Novice",       False),
+    q("Rune Mysteries",                        "Novice",       False),
+    q("Misthalin Mystery",                     "Novice",       False),
+    q("Imp Catcher",                           "Novice",       False),
+    q("Witch's Potion",                        "Novice",       False),
+    q("X Marks the Spot",                      "Novice",       False),
+    q("Doric's Quest",                         "Novice",       False),
+    q("Black Knights' Fortress",               "Intermediate", False),
+    q("The Knight's Sword",                    "Intermediate", False),
+    q("Vampire Slayer",                        "Intermediate", False),
+    q("Demon Slayer",                          "Intermediate", False),
+    q("Dragon Slayer I",                       "Experienced",  False),
+    # ── P2P – Novice ─────────────────────────────────────────────────────────
+    q("Druidic Ritual",                        "Novice",       True),
+    q("Hazeel Cult",                           "Novice",       True),
+    q("Sheep Herder",                          "Novice",       True),
+    q("Plague City",                           "Novice",       True,  "Elf"),
+    q("Clock Tower",                           "Novice",       True),
+    q("Holy Grail",                            "Intermediate", True,  "Camelot"),
+    q("Tree Gnome Village",                    "Intermediate", True,  "Gnome"),
+    q("Fight Arena",                           "Intermediate", True),
+    q("Waterfall Quest",                       "Intermediate", True),
+    q("Jungle Potion",                         "Novice",       True),
+    q("The Grand Tree",                        "Intermediate", True,  "Gnome"),
+    q("Witch's House",                         "Intermediate", True),
+    q("Lost City",                             "Intermediate", True),
+    q("Merlin's Crystal",                      "Intermediate", True,  "Camelot"),
+    q("Scorpion Catcher",                      "Intermediate", True),
+    q("Family Crest",                          "Intermediate", True),
+    q("Tribal Totem",                          "Intermediate", True),
+    q("Fishing Contest",                       "Novice",       True),
+    q("Monk's Friend",                         "Novice",       True),
+    q("Temple of Ikov",                        "Intermediate", True),
+    q("The Tourist Trap",                      "Intermediate", True),
+    q("Watchtower",                            "Intermediate", True),
+    q("Dwarf Cannon",                          "Novice",       True),
+    q("Murder Mystery",                        "Novice",       True),
+    q("The Dig Site",                          "Intermediate", True),
+    q("Gertrude's Cat",                        "Novice",       True),
+    q("Legends' Quest",                        "Master",       True),
+    q("Death Plateau",                         "Intermediate", True,  "Troll"),
+    q("Troll Stronghold",                      "Experienced",  True,  "Troll"),
+    q("Tai Bwo Wannai Trio",                   "Intermediate", True),
+    q("Regicide",                              "Experienced",  True,  "Elf"),
+    q("Eadgar's Ruse",                         "Experienced",  True,  "Troll"),
+    q("Shilo Village",                         "Intermediate", True),
+    q("Underground Pass",                      "Experienced",  True,  "Elf"),
+    q("Biohazard",                             "Novice",       True,  "Elf"),
+    q("Mourning's End Part I",                 "Experienced",  True,  "Elf"),
+    q("Mourning's End Part II",                "Master",       True,  "Elf"),
+    q("Roving Elves",                          "Experienced",  True,  "Elf"),
+    q("Big Chompy Bird Hunting",               "Intermediate", True),
+    q("Elemental Workshop I",                  "Novice",       True),
+    q("Elemental Workshop II",                 "Intermediate", True),
+    q("Priest in Peril",                       "Intermediate", True,  "Myreque"),
+    q("Nature Spirit",                         "Intermediate", True,  "Myreque"),
+    q("Start of the Battle of the Mages",      "Novice",       True),
+    q("Fairytale I - Growing Pains",           "Intermediate", True,  "Fairy Tale"),
+    q("Fairytale II - Cure a Queen",           "Experienced",  True,  "Fairy Tale"),
+    q("Ratcatchers",                           "Intermediate", True),
+    q("Enlightened Journey",                   "Intermediate", True),
+    q("Eagles' Peak",                          "Novice",       True),
+    q("Animal Magnetism",                      "Intermediate", True),
+    q("Contact!",                              "Intermediate", True),
+    q("Cold War",                              "Intermediate", True),
+    q("The Fremennik Trials",                  "Intermediate", True,  "Fremennik"),
+    q("Grim Tales",                            "Master",       True),
+    q("Royal Trouble",                         "Intermediate", True,  "Fremennik"),
+    q("Death to the Dorgeshuun",               "Intermediate", True,  "Dorgeshuun"),
+    q("More Experienced Deadmining",           "Novice",       True),
+    q("In Aid of the Myreque",                 "Intermediate", True,  "Myreque"),
+    q("In Search of the Myreque",              "Novice",       True,  "Myreque"),
+    q("Creature of Fenkenstrain",              "Intermediate", True,  "Myreque"),
+    q("Darkness of Hallowvale",                "Intermediate", True,  "Myreque"),
+    q("The Slug Menace",                       "Intermediate", True),
+    q("Rum Deal",                              "Experienced",  True),
+    q("Swan Song",                             "Master",       True),
+    q("One Small Favour",                      "Intermediate", True),
+    q("Mountain Daughter",                     "Intermediate", True,  "Fremennik"),
+    q("Between a Rock...",                     "Experienced",  True),
+    q("The Feud",                              "Intermediate", True),
+    q("The Golem",                             "Intermediate", True),
+    q("Desert Treasure I",                     "Master",       True),
+    q("Icthlarin's Little Helper",             "Intermediate", True),
+    q("Spirits of the Elid",                   "Intermediate", True),
+    q("Enakhra's Lament",                      "Intermediate", True),
+    q("Cabin Fever",                           "Experienced",  True),
+    q("Forgettable Tale...",                   "Intermediate", True),
+    q("Garden of Tranquillity",                "Intermediate", True),
+    q("A Tail of Two Cats",                    "Intermediate", True),
+    q("Wanted!",                               "Intermediate", True),
+    q("Mourning's End Part I",                 "Experienced",  True,  "Elf"),
+    q("Recipe for Disaster",                   "Master",       True),
+    q("Skippy and the Mogres",                 "Novice",       True),
+    q("Rag and Bone Man I",                    "Novice",       True),
+    q("Rag and Bone Man II",                   "Intermediate", True),
+    q("Zogre Flesh Eaters",                    "Intermediate", True),
+    q("The Great Brain Robbery",               "Experienced",  True),
+    q("What Lies Below",                       "Intermediate", True),
+    q("Olaf's Quest",                          "Intermediate", True,  "Fremennik"),
+    q("Another Slice of H.A.M.",               "Intermediate", True,  "Dorgeshuun"),
+    q("Dream Mentor",                          "Master",       True,  "Fremennik"),
+    q("Dealing with Scabaras",                 "Intermediate", True),
+    q("My Arm's Big Adventure",                "Intermediate", True,  "Troll"),
+    q("Lunar Diplomacy",                       "Intermediate", True,  "Fremennik"),
+    q("Grim Tales",                            "Master",       True),
+    q("A Taste of Hope",                       "Experienced",  True,  "Myreque"),
+    q("Getting Ahead",                         "Intermediate", True),
+    q("Below Ice Mountain",                    "Novice",       False),
+    q("Bone Voyage",                           "Intermediate", True),
+    q("The Forsaken Tower",                    "Intermediate", True,  "Kourend"),
+    q("Tale of the Righteous",                 "Novice",       True,  "Kourend"),
+    q("Architectural Alliance",                "Special",      True,  "Kourend"),
+    q("Client of Kourend",                     "Novice",       True,  "Kourend"),
+    q("Depths of Despair",                     "Intermediate", True,  "Kourend"),
+    q("The Queen of Thieves",                  "Intermediate", True,  "Kourend"),
+    q("Song of the Elves",                     "Grandmaster",  True,  "Elf"),
+    q("Sin of the Father",                     "Master",       True,  "Myreque"),
+    q("A Kingdom Divided",                     "Experienced",  True,  "Kourend"),
+    q("The Fremennik Exiles",                  "Master",       True,  "Fremennik"),
+    q("Twilight's Promise",                    "Intermediate", True,  "Kourend"),
+    q("Sleeping Giants",                       "Intermediate", True),
+    q("Desert Treasure II - The Fallen Empire","Grandmaster",  True),
+    q("The Path of Glouphrie",                 "Experienced",  True,  "Gnome"),
+    q("Children of the Sun",                   "Novice",       True),
+    q("Secrets of the North",                  "Master",       True,  "Fremennik"),
+    q("Perilous Moons",                        "Intermediate", True),
+    q("At First Light",                        "Intermediate", True),
+    q("Defender of Varrock",                   "Master",       True),
+    q("Natural History Quiz",                  "Special",      False),
+    q("Hopespear's Will",                      "Special",      True),
+    q("Enter the Abyss",                       "Special",      True),
+    q("Alfred Grimhand's Barcrawl",            "Special",      True),
+]
+
 # ── Utilidades ────────────────────────────────────────────────────────────────
 
 def log(msg: str) -> None:
@@ -211,6 +371,27 @@ def sync_skills(sb: Client) -> None:
     log(f"  ✓ {len(new_skills)} skills insertados")
 
 
+def sync_quests(sb: Client) -> None:
+    log("Sincronizando quests...")
+    existing = {r["name"] for r in sb.table("quests").select("name").execute().data}
+    # Deduplica la lista estática (puede haber entradas repetidas)
+    seen: set[str] = set()
+    unique_quests = []
+    for quest in OSRS_QUESTS:
+        if quest["name"] not in seen:
+            seen.add(quest["name"])
+            unique_quests.append(quest)
+
+    new_quests = [q for q in unique_quests if q["name"] not in existing]
+
+    if not new_quests:
+        log(f"  ✓ Los {len(unique_quests)} quests ya existen, nada que hacer")
+        return
+
+    sb.table("quests").insert(new_quests).execute()
+    log(f"  ✓ {len(new_quests)} quests insertados ({len(unique_quests)} total)")
+
+
 def main() -> None:
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         print("ERROR: Faltan SUPABASE_URL o SUPABASE_SERVICE_KEY en el .env")
@@ -222,6 +403,7 @@ def main() -> None:
     raw_items = fetch_osrs_items()
     sync_items(sb, raw_items)
     sync_skills(sb)
+    sync_quests(sb)
 
     log("=== Sincronización completada ✓ ===")
 
