@@ -199,6 +199,11 @@ export default function RoadmapBuilder({
       setTimeout(() => setSaveMsg(null), 3000);
       return;
     }
+    if (!thumbnail) {
+      setSaveMsg({ ok: false, text: 'Choose a thumbnail image before saving.' });
+      setTimeout(() => setSaveMsg(null), 3000);
+      return;
+    }
     setSaving(true);
     setSaveMsg(null);
     try {
@@ -274,7 +279,7 @@ export default function RoadmapBuilder({
             height: '32px',
             borderRadius: '0.375rem',
             border: '1px solid',
-            borderColor: thumbnail ? '#f59e0b' : '#3f3f46',
+            borderColor: thumbnail ? '#f59e0b' : '#ef4444',
             background: '#09090b',
             cursor: 'pointer',
             display: 'flex',
