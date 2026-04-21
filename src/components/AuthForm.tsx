@@ -116,7 +116,7 @@ export default function AuthForm({
             }}
             className="mt-2 w-full py-2.5 rounded-lg bg-amber-500 text-zinc-900 font-semibold text-sm hover:bg-amber-400 transition-colors"
           >
-            Go to Sign In
+            Go to Login
           </button>
         </div>
       ) : (
@@ -133,7 +133,7 @@ export default function AuthForm({
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                {t === 'signin' ? 'Sign In' : 'Register'}
+                {t === 'signin' ? 'Login' : 'Register'}
               </button>
             ))}
           </div>
@@ -160,7 +160,7 @@ export default function AuthForm({
                 disabled={loading}
                 className="w-full py-2.5 rounded-lg bg-amber-500 text-zinc-900 font-semibold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? 'Logging in...' : 'Login'}
               </button>
               <p className="text-center text-xs text-zinc-500">
                 No account?{' '}
@@ -250,7 +250,7 @@ export default function AuthForm({
                   onClick={() => setTab('signin')}
                   className="text-amber-400 hover:underline"
                 >
-                  Sign In
+                  Login
                 </button>
               </p>
             </form>

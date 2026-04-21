@@ -15,9 +15,14 @@ function generateChallenge() {
 interface Props {
   initialTab?: Tab;
   onClose: () => void;
+  message?: string;
 }
 
-export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
+export default function AuthModal({
+  initialTab = 'signin',
+  onClose,
+  message,
+}: Props) {
   const { signIn, signUp } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -263,13 +268,28 @@ export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
                 marginBottom: '-1px',
               }}
             >
-              {t === 'signin' ? 'Sign In' : 'Register'}
+              {t === 'signin' ? 'Login' : 'Register'}
             </button>
           ))}
         </div>
 
         {/* Form body */}
         <div style={{ padding: '1.5rem 1.5rem 2rem' }}>
+          {message && (
+            <div
+              style={{
+                background: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.35)',
+                borderRadius: '0.5rem',
+                padding: '0.6rem 0.875rem',
+                color: '#fbbf24',
+                fontSize: '0.8rem',
+                marginBottom: '1rem',
+              }}
+            >
+              {message}
+            </div>
+          )}
           {tab === 'signin' ? (
             <form
               onSubmit={handleSignIn}
@@ -298,8 +318,8 @@ export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
 
               <SubmitButton
                 loading={loading}
-                label="Sign In"
-                loadingLabel="Signing in..."
+                label="Login"
+                loadingLabel="Logging in..."
               />
 
               <p
@@ -476,7 +496,7 @@ export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
                     fontSize: '0.75rem',
                   }}
                 >
-                  Sign In
+                  Login
                 </button>
               </p>
             </form>

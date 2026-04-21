@@ -23,7 +23,7 @@ export default function CreateRoadmapLayout({
         <div className="w-full bg-zinc-800 border-b border-amber-500/30 px-6 py-3">
           <p className="text-zinc-300 text-sm">
             <span className="text-amber-400 font-semibold">
-              Sign in to save your roadmap.
+              Log in to save your roadmap.
             </span>{' '}
             You can build freely, but your progress won&apos;t be saved until
             you have an account.

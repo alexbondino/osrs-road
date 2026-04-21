@@ -24,6 +24,7 @@ import type { SidebarItem } from './Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { saveRoadmap, updateRoadmap } from '@/lib/roadmaps';
 import ThumbnailPicker from './ThumbnailPicker';
+import AuthModal from '@/components/AuthModal';
 
 const NODE_WIDTH = 140;
 const NODE_HEIGHT = 130;
@@ -99,6 +100,7 @@ export default function RoadmapBuilder({
   const [pendingSave, setPendingSave] = useState(false);
   // true only when the user explicitly picked a cover in this session
   const [coverConfirmed, setCoverConfirmed] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const onConnect: OnConnect = useCallback(
     connection =>
@@ -266,7 +268,7 @@ export default function RoadmapBuilder({
   const handleSave = async (overrideThumbnail?: string) => {
     const thumb = overrideThumbnail ?? thumbnail;
     if (!user) {
-      setSaveMsg({ ok: false, text: 'You must be signed in to save.' });
+      setAuthModalOpen(true);
       return;
     }
     if (nodes.length === 0) {
@@ -528,6 +530,14 @@ export default function RoadmapBuilder({
             setPickerOpen(false);
           }}
           skills={skills}
+        />
+      )}
+
+      {authModalOpen && (
+        <AuthModal
+          initialTab="signup"
+          message="You must be signed in to save your roadmap."
+          onClose={() => setAuthModalOpen(false)}
         />
       )}
     </div>
