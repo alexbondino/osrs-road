@@ -40,7 +40,13 @@ export default function Topbar() {
       <nav className="w-full flex items-center justify-between px-6 py-3 bg-zinc-900 border-b border-zinc-700 shadow-sm">
         <Link href="/">
           <span className="flex items-center gap-2 text-lg font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition-colors">
-            <img src="/logo.svg" alt="OSRS Roadmaps logo" className="h-7 w-7" />
+            <img
+              src="/logo.svg"
+              alt="OSRS Roadmaps logo"
+              width={24}
+              height={24}
+              style={{ width: 50, height: 50 }}
+            />
             OSRS - Roadmaps
           </span>
         </Link>
