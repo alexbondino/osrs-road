@@ -26,22 +26,14 @@ export default async function Home() {
           }}
         />
 
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #f59e0b, #b45309)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.5rem',
-            marginBottom: '1.25rem',
-            boxShadow: '0 0 24px rgba(245,158,11,0.35)',
-          }}
-        >
-          🗺️
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.svg"
+          alt="OSRS Roadmaps logo"
+          width={120}
+          height={120}
+          style={{ width: 120, height: 120, marginBottom: '1.25rem' }}
+        />
 
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
           OSRS Road

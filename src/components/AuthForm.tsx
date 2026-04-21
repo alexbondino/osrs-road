@@ -84,8 +84,7 @@ export default function AuthForm({
     setLoading(true);
     try {
       await signUp(email, password);
-      setSuccess('Account created! Signing you in...');
-      setTimeout(() => router.push(redirectTo), 1200);
+      setSuccess('confirm-email');
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Could not create account.'
@@ -149,6 +148,29 @@ export default function AuthForm({
             </button>
           </p>
         </form>
+      ) : success === 'confirm-email' ? (
+        <div className="flex flex-col items-center text-center gap-4 py-4">
+          <div className="text-5xl">📬</div>
+          <h2 className="text-white font-bold text-lg">Check your email</h2>
+          <p className="text-zinc-400 text-sm">
+            We sent a confirmation link to{' '}
+            <span className="text-amber-400 font-medium">{email}</span>.
+          </p>
+          <p className="text-zinc-500 text-xs">
+            Click the link in the email to activate your account, then come back
+            and sign in.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setTab('signin');
+              setSuccess('');
+            }}
+            className="mt-2 w-full py-2.5 rounded-lg bg-amber-500 text-zinc-900 font-semibold text-sm hover:bg-amber-400 transition-colors"
+          >
+            Go to Sign In
+          </button>
+        </div>
       ) : (
         <form onSubmit={handleSignUp} className="flex flex-col gap-4">
           <Field
@@ -165,13 +187,26 @@ export default function AuthForm({
             onChange={setPassword}
             placeholder="Min. 6 characters"
           />
-          <Field
-            label="Confirm Password"
-            type="password"
-            value={confirm}
-            onChange={setConfirm}
-            placeholder="••••••••"
-          />
+          <div className="flex flex-col gap-1">
+            <Field
+              label="Confirm Password"
+              type="password"
+              value={confirm}
+              onChange={setConfirm}
+              placeholder="Re-enter your password"
+            />
+            {confirm.length > 0 && (
+              <p
+                className={`text-xs font-medium px-1 ${
+                  password === confirm ? 'text-green-400' : 'text-red-400'
+                }`}
+              >
+                {password === confirm
+                  ? '✓ Passwords match'
+                  : '✗ Passwords do not match'}
+              </p>
+            )}
+          </div>
 
           {/* Math captcha */}
           <div className="bg-zinc-800 rounded-lg px-4 py-3 border border-zinc-600">
