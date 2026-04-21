@@ -188,24 +188,28 @@ export default function Sidebar({
         ))}
       </div>
 
-      {tab === 'items' && (
-        <div className="px-3 py-2 border-b border-zinc-700 shrink-0">
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search item..."
-            className="w-full bg-zinc-800 text-white text-xs px-3 py-2 rounded-md border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-500"
-          />
-        </div>
-      )}
+      <div className="px-3 py-2 border-b border-zinc-700 shrink-0">
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder={`Search ${tab}...`}
+          className="w-full bg-zinc-800 text-white text-xs px-3 py-2 rounded-md border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-500"
+        />
+      </div>
 
       <div className="flex-1 overflow-y-auto py-2 px-2 flex flex-col gap-1 min-w-0 w-full">
         {tab === 'skills' &&
-          skillItems.map(item => <DraggableItem key={item.id} item={item} />)}
+          skillItems
+            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
+            .map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'quests' &&
-          questItems.map(item => <DraggableItem key={item.id} item={item} />)}
+          questItems
+            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
+            .map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'diaries' &&
-          diaryItems.map(item => <DraggableItem key={item.id} item={item} />)}
+          diaryItems
+            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
+            .map(item => <DraggableItem key={item.id} item={item} />)}
         {tab === 'items' && query.length < 2 && (
           <p className="text-zinc-500 text-xs text-center mt-6 px-4">
             Type at least 2 characters to search items
