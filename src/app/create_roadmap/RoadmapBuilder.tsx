@@ -274,7 +274,10 @@ export default function RoadmapBuilder({
       setTimeout(() => setSaveMsg(null), 3000);
       return;
     }
-    if (!thumb || !coverConfirmed) {
+    // Skip picker if the user just picked a cover (overrideThumbnail is from onSelect)
+    // or has already confirmed one this session. Open picker otherwise.
+    const justPicked = overrideThumbnail !== undefined;
+    if (!thumb || (!coverConfirmed && !justPicked)) {
       setPendingSave(true);
       setPickerOpen(true);
       return;
@@ -448,7 +451,7 @@ export default function RoadmapBuilder({
             Clear
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving}
             className="px-3 py-1.5 text-xs rounded-md bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
