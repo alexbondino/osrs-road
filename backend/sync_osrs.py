@@ -2,13 +2,16 @@
 sync_osrs.py — Carga y sincronización incremental de ítems y skills de OSRS en Supabase.
 
 Fuente de datos:
-  - Ítems: https://prices.runescape.wiki/api/v1/mapping  (todos los ítems del GE)
-  - Skills: lista estática (los 23 skills de OSRS no cambian salvo actualizaciones mayores)
+  - Ítems: OSRS Wiki (generator=embeddedin sobre Template:Infobox Item)
+           Cubre TODOS los ítems del juego: tradeables y no-tradeables.
+  - Stats GE: https://prices.runescape.wiki/api/v1/osrs/mapping
+              Enriquece los ítems tradeables con lowalch, highalch, etc.
+  - Skills / Quests / Diaries: listas estáticas.
 
 Estrategia:
   - Primera ejecución: inserta todo.
   - Ejecuciones siguientes: inserta nuevos ítems y actualiza solo los que
-    tengan cambios en sus stats (lowalch, highalch, value, limit_ge, etc.).
+    tengan cambios detectados.
   - Usa la service_role key de Supabase para saltar Row Level Security.
 
 Uso:
@@ -18,11 +21,13 @@ Uso:
   4. Ejecuta:        python sync_osrs.py
 """
 
-import hashlib
 import json
 import os
+import re
 import sys
+import time
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
@@ -37,6 +42,15 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 OSRS_MAPPING_URL = "https://prices.runescape.wiki/api/v1/osrs/mapping"
 OSRS_WIKI_ICON_BASE = "https://oldschool.runescape.wiki/images"
+WIKI_API = "https://oldschool.runescape.wiki/api.php"
+
+WIKI_PAGE_LIMIT = 50    # páginas por request al wiki (máximo permitido)
+WIKI_DELAY     = 0.25   # segundos entre requests
+WIKI_RETRIES   = 3      # reintentos en timeout
+
+RE_INFOBOX = re.compile(r'\{\{Infobox Item', re.IGNORECASE)
+RE_ID      = re.compile(r'\|\s*id\d*\s*=\s*(\d+)', re.IGNORECASE)
+RE_IMAGE   = re.compile(r'\|\s*image\d*\s*=\s*\[\[File:([^\|\]\n]+\.png)\]\]', re.IGNORECASE)
 
 HEADERS = {
     "User-Agent": "osrs-road-sync/1.0 (https://github.com/alexbondino/osrs-road)"
@@ -238,69 +252,170 @@ def log(msg: str) -> None:
     print(f"[{ts}] {msg}", flush=True)
 
 
-def icon_to_url(icon: str) -> str:
-    """Convierte el nombre de icono a URL de la OSRS Wiki."""
-    return f"{OSRS_WIKI_ICON_BASE}/{icon.replace(' ', '_')}"
-
-
-def item_hash(item: dict) -> str:
-    """Hash de los campos que nos interesan detectar si cambian."""
-    key = json.dumps({
-        "name":     item.get("name"),
-        "examine":  item.get("examine"),
-        "members":  item.get("members"),
-        "lowalch":  item.get("lowalch"),
-        "highalch": item.get("highalch"),
-        "limit_ge": item.get("limit"),    # campo en la API se llama "limit"
-        "value":    item.get("value"),
-        "icon":     item.get("icon"),
-    }, sort_keys=True)
-    return hashlib.md5(key.encode()).hexdigest()
+def icon_to_url(filename: str) -> str:
+    """Convierte nombre de archivo de icono a URL de la OSRS Wiki."""
+    safe = quote(filename.replace(' ', '_'), safe='()_.~-')
+    return f"{OSRS_WIKI_ICON_BASE}/{safe}"
 
 
 def batches(lst: list, size: int):
     for i in range(0, len(lst), size):
         yield lst[i : i + size]
 
-# ── Lógica principal ──────────────────────────────────────────────────────────
 
-def fetch_osrs_items() -> list[dict]:
-    log("Descargando ítems desde OSRS Wiki...")
+# ── Fuentes de datos ──────────────────────────────────────────────────────────
+
+def fetch_ge_mapping() -> dict[int, dict]:
+    """Descarga el GE mapping → dict keyed by item ID con stats de mercado."""
+    log("Descargando GE mapping (ítems tradeables)...")
     resp = requests.get(OSRS_MAPPING_URL, headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    data = resp.json()
-    log(f"  → {len(data):,} ítems descargados")
+    data = {item["id"]: item for item in resp.json()}
+    log(f"  → {len(data):,} ítems en el GE mapping")
     return data
 
 
-def build_row(raw: dict) -> dict:
-    icon = raw.get("icon", "")
-    return {
-        "id":       raw["id"],
-        "name":     raw.get("name", ""),
-        "examine":  raw.get("examine"),
-        "icon":     icon,
-        "icon_url": icon_to_url(icon) if icon else None,
-        "members":  bool(raw.get("members", False)),
-        "lowalch":  raw.get("lowalch"),
-        "highalch": raw.get("highalch"),
-        "limit_ge": raw.get("limit"),
-        "value":    raw.get("value"),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+def _parse_wiki_page(title: str, wikitext: str) -> list[dict]:
+    """Extrae todos los pares (id, image) del wikitext de un ítem."""
+    if not RE_INFOBOX.search(wikitext):
+        return []
+    ids    = [int(m) for m in RE_ID.findall(wikitext)]
+    images = RE_IMAGE.findall(wikitext)
+    if not ids:
+        return []
+    result = []
+    for i, item_id in enumerate(ids):
+        img = images[i] if i < len(images) else (images[0] if images else None)
+        result.append({
+            "id":   item_id,
+            "name": title,
+            "icon": img,
+        })
+    return result
+
+
+def fetch_all_wiki_items() -> list[dict]:
+    """
+    Descarga TODOS los ítems del wiki usando generator=embeddedin sobre
+    Template:Infobox Item. Combina descubrimiento de páginas + wikitext
+    en un único request por lote — cubre tradeables y no-tradeables.
+    """
+    log("Descargando ítems del wiki OSRS (tradeables + no-tradeables)...")
+    params: dict = {
+        "action":        "query",
+        "generator":     "embeddedin",
+        "geititle":      "Template:Infobox Item",
+        "geilimit":      str(WIKI_PAGE_LIMIT),
+        "prop":          "revisions",
+        "rvprop":        "content",
+        "rvslots":       "main",
+        "format":        "json",
+        "formatversion": "2",
     }
 
+    seen_ids: set[int] = set()
+    all_items: list[dict] = []
+    batch_num = 0
 
-def sync_items(sb: Client, raw_items: list[dict]) -> None:
+    while True:
+        for attempt in range(1, WIKI_RETRIES + 1):
+            try:
+                resp = requests.get(WIKI_API, params=params, headers=HEADERS, timeout=45)
+                resp.raise_for_status()
+                break
+            except requests.exceptions.Timeout:
+                wait = attempt * 5
+                log(f"  ⏳ Timeout (intento {attempt}/{WIKI_RETRIES}), reintentando en {wait}s…")
+                time.sleep(wait)
+        else:
+            log("  ⚠  Batch fallido tras varios intentos, continuando…")
+            break
+
+        data = resp.json()
+        pages = data.get("query", {}).get("pages", [])
+        batch_num += 1
+
+        for page in pages:
+            revisions = page.get("revisions")
+            if not revisions:
+                continue
+            wikitext = (
+                revisions[0].get("slots", {}).get("main", {}).get("content")
+                or revisions[0].get("content", "")
+            )
+            for item in _parse_wiki_page(page["title"], wikitext):
+                if item["id"] not in seen_ids:
+                    seen_ids.add(item["id"])
+                    all_items.append(item)
+
+        if batch_num % 20 == 0:
+            log(f"  … {len(all_items):,} ítems únicos encontrados hasta ahora")
+
+        if "continue" not in data:
+            break
+        params.update(data["continue"])
+        time.sleep(WIKI_DELAY)
+
+    log(f"  → {len(all_items):,} ítems únicos extraídos del wiki")
+    return all_items
+
+
+def build_items(wiki_items: list[dict], ge_map: dict[int, dict]) -> list[dict]:
+    """
+    Combina los ítems del wiki con los stats del GE mapping.
+    - Si el ID está en el GE → tradeable=True, enriquece con stats.
+    - Si no → tradeable=False, solo nombre e icono.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    rows = []
+    for item in wiki_items:
+        item_id = item["id"]
+        icon    = item.get("icon") or ""
+        ge      = ge_map.get(item_id)
+
+        row: dict = {
+            "id":         item_id,
+            "name":       item["name"],
+            "icon":       icon,
+            "icon_url":   icon_to_url(icon) if icon else None,
+            "tradeable":  ge is not None,
+            "updated_at": now,
+        }
+        if ge:
+            row.update({
+                "name":     ge.get("name", item["name"]),  # GE name es canónico
+                "examine":  ge.get("examine"),
+                "members":  bool(ge.get("members", False)),
+                "lowalch":  ge.get("lowalch"),
+                "highalch": ge.get("highalch"),
+                "limit_ge": ge.get("limit"),
+                "value":    ge.get("value"),
+            })
+        else:
+            row.update({
+                "examine":  None,
+                "members":  False,
+                "lowalch":  None,
+                "highalch": None,
+                "limit_ge": None,
+                "value":    None,
+            })
+        rows.append(row)
+    return rows
+
+
+def sync_items(sb: Client) -> None:
+    ge_map    = fetch_ge_mapping()
+    wiki_items = fetch_all_wiki_items()
+    new_rows  = build_items(wiki_items, ge_map)
+
     log("Comparando con Supabase...")
-
-    # Traer todos los IDs ya existentes con sus hashes simulados
-    # (traemos los campos relevantes para comparar)
     existing_map: dict[int, dict] = {}
     page = 0
     while True:
         rows = (
             sb.table("items")
-            .select("id,name,examine,members,lowalch,highalch,limit_ge,value,icon")
+            .select("id,name,examine,members,lowalch,highalch,limit_ge,value,icon,tradeable")
             .range(page * 1000, page * 1000 + 999)
             .execute()
             .data
@@ -316,33 +431,33 @@ def sync_items(sb: Client, raw_items: list[dict]) -> None:
     log(f"  → {len(existing_map):,} ítems ya existen en Supabase")
 
     to_upsert: list[dict] = []
-    new_count = 0
-    changed_count = 0
+    new_count = changed_count = 0
 
-    for raw in raw_items:
-        row = build_row(raw)
+    for row in new_rows:
         existing = existing_map.get(row["id"])
-
         if existing is None:
             to_upsert.append(row)
             new_count += 1
         else:
-            # Comparar campos relevantes
             changed = (
-                existing.get("name")     != row["name"]     or
-                existing.get("examine")  != row["examine"]  or
-                existing.get("members")  != row["members"]  or
-                existing.get("lowalch")  != row["lowalch"]  or
-                existing.get("highalch") != row["highalch"] or
-                existing.get("limit_ge") != row["limit_ge"] or
-                existing.get("value")    != row["value"]    or
-                existing.get("icon")     != row["icon"]
+                existing.get("name")      != row["name"]      or
+                existing.get("examine")   != row["examine"]   or
+                existing.get("members")   != row["members"]   or
+                existing.get("lowalch")   != row["lowalch"]   or
+                existing.get("highalch")  != row["highalch"]  or
+                existing.get("limit_ge")  != row["limit_ge"]  or
+                existing.get("value")     != row["value"]     or
+                existing.get("icon")      != row["icon"]      or
+                existing.get("tradeable") != row["tradeable"]
             )
             if changed:
                 to_upsert.append(row)
                 changed_count += 1
 
-    log(f"  → {new_count:,} nuevos · {changed_count:,} con cambios · {len(raw_items) - new_count - changed_count:,} sin cambios")
+    tradeable_total    = sum(1 for r in new_rows if r["tradeable"])
+    untradeable_total  = len(new_rows) - tradeable_total
+    log(f"  → Wiki: {tradeable_total:,} tradeables + {untradeable_total:,} no-tradeables")
+    log(f"  → {new_count:,} nuevos · {changed_count:,} con cambios · {len(new_rows) - new_count - changed_count:,} sin cambios")
 
     if not to_upsert:
         log("  ✓ Sin cambios que aplicar en ítems")
@@ -355,7 +470,7 @@ def sync_items(sb: Client, raw_items: list[dict]) -> None:
         done += len(batch)
         log(f"  → {done:,}/{len(to_upsert):,} subidos")
 
-    log(f"  ✓ Ítems sincronizados: {new_count} nuevos, {changed_count} actualizados")
+    log(f"  ✓ Ítems sincronizados: {new_count:,} nuevos, {changed_count:,} actualizados")
 
 
 def sync_skills(sb: Client) -> None:
@@ -567,8 +682,7 @@ def main() -> None:
     log("=== OSRS Road — Sincronización de datos ===")
     sb: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    raw_items = fetch_osrs_items()
-    sync_items(sb, raw_items)
+    sync_items(sb)
     sync_skills(sb)
     sync_quests(sb)
     sync_diaries(sb)
