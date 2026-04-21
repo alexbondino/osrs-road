@@ -101,8 +101,7 @@ export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
     setLoading(true);
     try {
       await signUp(email, password);
-      setSuccess('Account created! You can now sign in.');
-      setTimeout(() => setTab('signin'), 1600);
+      setSuccess('confirm-email');
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Could not create account.'
@@ -271,7 +270,61 @@ export default function AuthModal({ initialTab = 'signin', onClose }: Props) {
 
         {/* Form body */}
         <div style={{ padding: '1.5rem 1.5rem 2rem' }}>
-          {tab === 'signin' ? (
+          {success === 'confirm-email' ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '1rem',
+                padding: '1rem 0',
+              }}
+            >
+              <div style={{ fontSize: '3rem' }}>📬</div>
+              <h3
+                style={{
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  margin: 0,
+                }}
+              >
+                Check your email
+              </h3>
+              <p style={{ color: '#a1a1aa', fontSize: '0.8rem', margin: 0 }}>
+                We sent a confirmation link to{' '}
+                <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                  {email}
+                </span>
+                .
+              </p>
+              <p style={{ color: '#71717a', fontSize: '0.72rem', margin: 0 }}>
+                Click the link to activate your account, then come back and sign
+                in.
+              </p>
+              <button
+                onClick={() => {
+                  setTab('signin');
+                  setSuccess('');
+                }}
+                style={{
+                  marginTop: '0.5rem',
+                  width: '100%',
+                  padding: '0.65rem',
+                  borderRadius: '0.75rem',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  border: 'none',
+                  color: '#1c1917',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Go to Sign In
+              </button>
+            </div>
+          ) : tab === 'signin' ? (
             <form
               onSubmit={handleSignIn}
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
