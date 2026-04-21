@@ -42,6 +42,12 @@ export default async function Home() {
           Plan your Old School RuneScape journey. Build and share skill, quest
           &amp; item progression roadmaps.
         </p>
+        <Link
+          href="/create_roadmap"
+          className="px-6 py-3 rounded-lg bg-amber-500 text-zinc-900 font-semibold text-sm hover:bg-amber-400 transition-colors shadow-lg"
+        >
+          Create Roadmap
+        </Link>
       </section>
 
       {/* Community roadmaps */}

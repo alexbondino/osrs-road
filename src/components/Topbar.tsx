@@ -119,7 +119,7 @@ export default function Topbar() {
                     onClick={() => setModalTab('signin')}
                     className="px-4 py-2 rounded-md border border-zinc-500 text-zinc-200 text-sm font-medium hover:bg-zinc-700 transition-colors"
                   >
-                    Sign In
+                    Login
                   </button>
                   <button
                     onClick={() => setModalTab('signup')}

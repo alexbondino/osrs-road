@@ -13,6 +13,39 @@ export interface Roadmap {
   updated_at: string;
 }
 
+// ── Supabase REST helpers (bypass postgrest-js JSON.stringify) ────────────
+// postgrest-js calls JSON.stringify(this.body) internally and fails when
+// ReactFlow nodes contain cyclic internal references. Using raw fetch lets
+// us control serialization completely.
+
+const REST_URL = process.env.NEXT_PUBLIC_SUPABASE_URL! + '/rest/v1';
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token ?? ANON_KEY;
+  return {
+    'Content-Type': 'application/json',
+    apikey: ANON_KEY,
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+// Cycle-safe JSON.stringify (breaks circular refs instead of throwing).
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet();
+  return JSON.stringify(value, (_key, val) => {
+    if (typeof val === 'bigint') return Number(val);
+    if (typeof val === 'object' && val !== null) {
+      if (seen.has(val as object)) return undefined;
+      seen.add(val as object);
+    }
+    return val;
+  });
+}
+
 // ── Fetch all roadmaps (home, server component) ───────────────────────────
 export async function fetchAllRoadmaps(): Promise<Roadmap[]> {
   const { data, error } = await supabase
@@ -43,16 +76,19 @@ export async function saveRoadmap(payload: {
   user_id: string;
   name: string;
   thumbnail_url?: string | null;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: object[];
+  edges: object[];
 }): Promise<{ id: string } | null> {
-  const { data, error } = await supabase
-    .from('roadmaps')
-    .insert(payload)
-    .select('id')
-    .single();
-  if (error) throw error;
-  return data as { id: string };
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${REST_URL}/roadmaps`, {
+    method: 'POST',
+    headers: { ...headers, Prefer: 'return=representation' },
+    body: safeStringify(payload),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? { id: row.id } : null;
 }
 
 // ── Actualizar un roadmap existente ───────────────────────────────────────
@@ -61,15 +97,20 @@ export async function updateRoadmap(
   payload: {
     name: string;
     thumbnail_url?: string | null;
-    nodes: Node[];
-    edges: Edge[];
+    nodes: object[];
+    edges: object[];
   }
 ): Promise<void> {
-  const { error } = await supabase
-    .from('roadmaps')
-    .update(payload)
-    .eq('id', id);
-  if (error) throw error;
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    `${REST_URL}/roadmaps?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { ...headers, Prefer: 'return=minimal' },
+      body: safeStringify(payload),
+    }
+  );
+  if (!res.ok) throw new Error(await res.text());
 }
 
 // ── Eliminar un roadmap ───────────────────────────────────────────────────
@@ -149,16 +190,14 @@ export async function saveProgress(
   roadmapId: string,
   completedNodes: string[]
 ): Promise<void> {
-  const { error } = await supabase
-    .from('roadmap_progress')
-    .upsert(
-      {
-        user_id: userId,
-        roadmap_id: roadmapId,
-        completed_nodes: completedNodes,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,roadmap_id' }
-    );
+  const { error } = await supabase.from('roadmap_progress').upsert(
+    {
+      user_id: userId,
+      roadmap_id: roadmapId,
+      completed_nodes: completedNodes,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,roadmap_id' }
+  );
   if (error) throw error;
 }

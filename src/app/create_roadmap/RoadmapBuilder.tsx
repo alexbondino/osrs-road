@@ -96,6 +96,9 @@ export default function RoadmapBuilder({
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(
     null
   );
+  const [pendingSave, setPendingSave] = useState(false);
+  // true only when the user explicitly picked a cover in this session
+  const [coverConfirmed, setCoverConfirmed] = useState(false);
 
   const onConnect: OnConnect = useCallback(
     connection =>
@@ -260,7 +263,8 @@ export default function RoadmapBuilder({
     [nodes, setNodes]
   );
 
-  const handleSave = async () => {
+  const handleSave = async (overrideThumbnail?: string) => {
+    const thumb = overrideThumbnail ?? thumbnail;
     if (!user) {
       setSaveMsg({ ok: false, text: 'You must be signed in to save.' });
       return;
@@ -270,23 +274,47 @@ export default function RoadmapBuilder({
       setTimeout(() => setSaveMsg(null), 3000);
       return;
     }
-    if (!thumbnail) {
-      setThumbErrorKey(k => k + 1);
-      setSaveMsg({
-        ok: false,
-        text: 'Choose a cover image before saving.',
-      });
-      setTimeout(() => setSaveMsg(null), 3000);
+    if (!thumb || !coverConfirmed) {
+      setPendingSave(true);
+      setPickerOpen(true);
       return;
     }
     setSaving(true);
     setSaveMsg(null);
     try {
+      // Extract only plain-primitive fields from each ReactFlow node/edge.
+      // roadmaps.ts uses raw fetch + safeStringify so postgrest-js never
+      // touches these objects, but we still sanitize here for clean DB data.
+      const safeNodes = nodes.map(n => {
+        const d = n.data as Record<string, unknown>;
+        return {
+          id: String(n.id),
+          type: String(n.type ?? 'itemNode'),
+          position: { x: Number(n.position.x), y: Number(n.position.y) },
+          data: {
+            label: String(d?.label ?? ''),
+            icon_url: d?.icon_url != null ? String(d.icon_url) : null,
+            category: String(d?.category ?? ''),
+            max_level: d?.max_level != null ? Number(d.max_level) : null,
+            ...(d?.level != null ? { level: String(d.level) } : {}),
+            ...(d?.qty != null ? { qty: String(d.qty) } : {}),
+            ...(d?.completed != null
+              ? { completed: Boolean(d.completed) }
+              : {}),
+          },
+        };
+      });
+      const safeEdges = edges.map(e => ({
+        id: String(e.id),
+        source: String(e.source),
+        target: String(e.target),
+        ...(e.type != null ? { type: String(e.type) } : {}),
+      }));
       const payload = {
         name: roadmapName.trim() || 'My Roadmap',
-        thumbnail_url: thumbnail,
-        nodes,
-        edges,
+        thumbnail_url: thumb,
+        nodes: safeNodes,
+        edges: safeEdges,
       };
       if (roadmapId) {
         await updateRoadmap(roadmapId, payload);
@@ -300,6 +328,7 @@ export default function RoadmapBuilder({
         }
       }
     } catch (err: unknown) {
+      console.error('[RoadmapBuilder] Save error:', err);
       setSaveMsg({
         ok: false,
         text: err instanceof Error ? err.message : 'Could not save roadmap.',
@@ -485,8 +514,16 @@ export default function RoadmapBuilder({
           onSelect={url => {
             setThumbnail(url);
             setThumbErrorKey(0);
+            setCoverConfirmed(true);
+            if (pendingSave) {
+              setPendingSave(false);
+              handleSave(url);
+            }
           }}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => {
+            setPendingSave(false);
+            setPickerOpen(false);
+          }}
           skills={skills}
         />
       )}
