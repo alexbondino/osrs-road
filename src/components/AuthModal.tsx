@@ -622,6 +622,7 @@ function InputField({
           <button
             type="button"
             onClick={toggleVisible}
+            tabIndex={-1}
             style={{
               background: 'none',
               border: 'none',
