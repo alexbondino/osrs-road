@@ -126,7 +126,6 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
                 </div>
               );
             })()}
-
           {/* group items list */}
           {tooltip.groupItems && tooltip.groupItems.length > 0 && (
             <div className="flex flex-col gap-1.5">
@@ -164,7 +163,6 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
               })}
             </div>
           )}
-
           {/* checklist */}
           {tooltip.checklist && tooltip.checklist.length > 0 && (
             <>
@@ -200,6 +198,12 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
               </div>
             </>
           )}
+          {/* hint */}
+          <div className="border-t border-zinc-700/40 mt-1 pt-2">
+            <span className="text-zinc-600 text-[10px]">
+              Double-click to view checklist · Click to mark complete
+            </span>
+          </div>{' '}
         </div>
       </div>
     </div>,
