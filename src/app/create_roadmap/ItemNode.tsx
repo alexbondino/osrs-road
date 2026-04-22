@@ -94,6 +94,7 @@ export default function ItemNode({
         onDoubleClick={e => {
           if ((e.target as HTMLElement).closest('input')) return;
           e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('nodeModalOpen'));
           (data as unknown as { onModalOpen?: () => void }).onModalOpen?.();
           setChecklistOpen(true);
         }}
@@ -212,6 +213,7 @@ export default function ItemNode({
             readOnly ? cl => updateNodeData(id, { checklist: cl }) : undefined
           }
           onClose={() => {
+            window.dispatchEvent(new CustomEvent('nodeModalClose'));
             (data as unknown as { onModalClose?: () => void }).onModalClose?.();
             setChecklistOpen(false);
           }}

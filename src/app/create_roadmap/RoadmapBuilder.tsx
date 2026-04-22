@@ -133,6 +133,19 @@ export default function RoadmapBuilder({
   );
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [anyModalOpen, setAnyModalOpen] = useState(false);
+
+  // Detectar cuando un nodo abre/cierra su modal
+  useEffect(() => {
+    const onOpen = () => setAnyModalOpen(true);
+    const onClose = () => setAnyModalOpen(false);
+    window.addEventListener('nodeModalOpen', onOpen);
+    window.addEventListener('nodeModalClose', onClose);
+    return () => {
+      window.removeEventListener('nodeModalOpen', onOpen);
+      window.removeEventListener('nodeModalClose', onClose);
+    };
+  }, []);
 
   // Warn on browser refresh / tab close when there are unsaved changes
   useEffect(() => {
@@ -340,7 +353,14 @@ export default function RoadmapBuilder({
             .filter(n => n.id !== draggedNode.id)
             .map(n =>
               n.id === currentDockTarget
-                ? { ...n, type: 'groupNode', data: { items: mergedItems } }
+                ? {
+                    ...n,
+                    type: 'groupNode',
+                    data: {
+                      ...(n.data as object),
+                      items: mergedItems,
+                    },
+                  }
                 : n
             );
         });
@@ -691,7 +711,7 @@ export default function RoadmapBuilder({
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
-            deleteKeyCode={['Backspace', 'Delete']}
+            deleteKeyCode={anyModalOpen ? null : ['Backspace', 'Delete']}
           >
             <AlignmentGuides guides={guides} />
             <Controls className="[&>button]:bg-zinc-800 [&>button]:border-zinc-600 [&>button]:text-white" />

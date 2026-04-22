@@ -344,11 +344,23 @@ function EditModal({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if ((e.key === 'Backspace' || e.key === 'Delete') && !readOnly) {
+        // Si hay un item seleccionado, eliminarlo en lugar de propagar
+        if (selectedIndex !== null && draft[selectedIndex] !== null) {
+          e.stopPropagation();
+          remove(selectedIndex);
+          return;
+        }
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, readOnly, selectedIndex, draft]);
 
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
@@ -729,7 +741,7 @@ export default function GroupNode({
   id: string;
   data: GroupNodeData;
 }) {
-  const { updateNodeData } = useReactFlow();
+  const { updateNodeData, setNodes } = useReactFlow();
   const [modalOpen, setModalOpen] = useState(false);
 
   const items = data.items ?? [];
@@ -778,6 +790,7 @@ export default function GroupNode({
         }}
         onDoubleClick={e => {
           e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('nodeModalOpen'));
           (data as unknown as { onModalOpen?: () => void }).onModalOpen?.();
           setModalOpen(true);
         }}
@@ -839,16 +852,46 @@ export default function GroupNode({
           readOnly={readOnly}
           itemCompletedLabels={itemCompletedLabels}
           onItemToggle={onItemToggle}
-          onSave={(updatedItems, updatedChecklist) =>
-            updateNodeData(id, {
-              items: updatedItems,
-              checklist: updatedChecklist,
-            })
-          }
+          onSave={(updatedItems, updatedChecklist) => {
+            const realItems = updatedItems.filter(
+              (x): x is GItem => x !== null
+            );
+            if (realItems.length === 1 && !readOnly) {
+              // Degradar a itemNode
+              const single = realItems[0];
+              setNodes(nds =>
+                nds.map(n =>
+                  n.id === id
+                    ? {
+                        ...n,
+                        type: 'itemNode',
+                        data: {
+                          label: single.label,
+                          icon_url: single.icon_url,
+                          category: single.category,
+                          ...(single.level != null
+                            ? { level: single.level }
+                            : {}),
+                          ...(single.qty != null ? { qty: single.qty } : {}),
+                          checklist: updatedChecklist,
+                          completed: data.completed ?? false,
+                        },
+                      }
+                    : n
+                )
+              );
+            } else {
+              updateNodeData(id, {
+                items: updatedItems,
+                checklist: updatedChecklist,
+              });
+            }
+          }}
           onChecklistChange={
             readOnly ? cl => updateNodeData(id, { checklist: cl }) : undefined
           }
           onClose={() => {
+            window.dispatchEvent(new CustomEvent('nodeModalClose'));
             (data as unknown as { onModalClose?: () => void }).onModalClose?.();
             setModalOpen(false);
           }}
