@@ -214,6 +214,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedRef = useRef(false);
+  const suppressTooltipRef = useRef(false);
 
   // Refs para acceder a los valores más recientes dentro de callbacks con debounce
   const completedIdsRef = useRef<Set<string>>(new Set());
@@ -263,6 +264,13 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
                 ...n.data,
                 completed: idSet.has(n.id),
                 readOnly: true,
+                onModalOpen: () => {
+                  setTooltip(null);
+                  suppressTooltipRef.current = true;
+                },
+                onModalClose: () => {
+                  suppressTooltipRef.current = false;
+                },
                 ...(updatedChecklist ? { checklist: updatedChecklist } : {}),
               },
             };
@@ -302,6 +310,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   }, [nodes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeMouseEnter: NodeMouseHandler = useCallback((_e, node) => {
+    if (suppressTooltipRef.current) return;
     const d = node.data as {
       label?: string;
       icon_url?: string | null;
@@ -348,6 +357,11 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   }, []);
 
   const onNodeMouseLeave: NodeMouseHandler = useCallback(() => {
+    setTooltip(null);
+    suppressTooltipRef.current = false;
+  }, []);
+
+  const onNodeDoubleClick: NodeMouseHandler = useCallback(() => {
     setTooltip(null);
   }, []);
 
@@ -414,6 +428,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
         zoomOnDoubleClick={false}
         deleteKeyCode={null}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onNodesChange={onNodesChange}

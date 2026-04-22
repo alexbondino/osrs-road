@@ -272,6 +272,7 @@ function EditModal({
           onClose();
         mouseDownOnOverlay.current = false;
       }}
+      onClick={e => e.stopPropagation()}
     >
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-80 max-h-[75vh] flex flex-col overflow-hidden">
         {/* header */}
@@ -476,6 +477,7 @@ export default function GroupNode({
         }}
         onDoubleClick={e => {
           e.stopPropagation();
+          (data as unknown as { onModalOpen?: () => void }).onModalOpen?.();
           setModalOpen(true);
         }}
         title="Double-click to edit"
@@ -539,7 +541,10 @@ export default function GroupNode({
           onChecklistChange={
             readOnly ? cl => updateNodeData(id, { checklist: cl }) : undefined
           }
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            (data as unknown as { onModalClose?: () => void }).onModalClose?.();
+            setModalOpen(false);
+          }}
         />
       )}
     </>
