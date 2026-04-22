@@ -35,8 +35,7 @@ const SNAP_THRESHOLD = 6;
 const nodeTypes = { itemNode: ItemNode, groupNode: GroupNode };
 const edgeTypes = { midpoint: MidpointEdge };
 
-let idCounter = 1;
-const getId = () => `node_${idCounter++}`;
+// idCounter is managed per-component instance via useRef (see RoadmapBuilder)
 
 interface Skill {
   id: number;
@@ -87,6 +86,19 @@ export default function RoadmapBuilder({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Initialize counter above any existing node IDs to avoid collisions
+  const idCounterRef = useRef<number>(
+    (() => {
+      let max = 0;
+      initialNodes.forEach(n => {
+        const m = n.id.match(/^node_(\d+)$/);
+        if (m) max = Math.max(max, Number(m[1]));
+      });
+      return max + 1;
+    })()
+  );
+  const getId = useCallback(() => `node_${idCounterRef.current++}`, []);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [roadmapName, setRoadmapName] = useState(initialName);
   const [thumbnail, setThumbnail] = useState<string | null>(
@@ -100,8 +112,10 @@ export default function RoadmapBuilder({
     null
   );
   const [pendingSave, setPendingSave] = useState(false);
-  // true only when the user explicitly picked a cover in this session
-  const [coverConfirmed, setCoverConfirmed] = useState(false);
+  // true if the roadmap already has a thumbnail or the user picked one this session
+  const [coverConfirmed, setCoverConfirmed] = useState(
+    initialThumbnail != null && initialThumbnail !== ''
+  );
   const [authModalOpen, setAuthModalOpen] = useState(false);
   // ref to current dock target — updated on every drag without causing re-renders
   const dockTargetRef = useRef<string | null>(null);
@@ -267,10 +281,16 @@ export default function RoadmapBuilder({
         setNodes(nds => {
           const target = nds.find(n => n.id === currentDockTarget);
           if (!target) return nds;
+          const seen = new Set<string>();
           const mergedItems: GItem[] = [
             ...extractItems(target),
             ...draggedItems,
-          ];
+          ].filter(item => {
+            const key = `${item.category}::${item.label}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
           return nds
             .filter(n => n.id !== draggedNode.id)
             .map(n =>
