@@ -392,10 +392,12 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       qty: d.qty,
       groupItems:
         node.type === 'groupNode'
-          ? (d.items ?? []).map(it => ({
-              ...it,
-              icon_url: resolveIcon(it.icon_url, it.category),
-            }))
+          ? (d.items ?? [])
+              .filter((it): it is NonNullable<typeof it> => it !== null)
+              .map(it => ({
+                ...it,
+                icon_url: resolveIcon(it.icon_url, it.category),
+              }))
           : undefined,
       checklist: ((d.checklist ?? []) as unknown[]).map(item =>
         typeof item === 'string'
