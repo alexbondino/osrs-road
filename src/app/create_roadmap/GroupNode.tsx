@@ -23,8 +23,8 @@ const QUEST_ICON =
 const DIARY_ICON =
   'https://oldschool.runescape.wiki/images/Achievement_Diaries.png';
 
-const CELL_W = 52;
-const CELL_H = 48;
+const CELL_W = 62;
+const CELL_H = 57;
 const H_PAD = 16;
 const V_PAD = 16;
 
