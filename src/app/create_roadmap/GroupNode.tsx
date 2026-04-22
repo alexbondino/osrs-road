@@ -39,12 +39,16 @@ function ItemCell({ item }: { item: GItem }) {
   const [hovered, setHovered] = useState(false);
   const url = resolveIcon(item);
 
-  const sublabel =
-    item.category === 'Skill' && item.level
-      ? `Lv ${item.level}`
-      : item.category === 'Item' && item.qty
-        ? `×${item.qty}`
+  // badge numérico para Item y Skill
+  const badge =
+    item.category === 'Item'
+      ? `${item.qty ?? '1'}`
+      : item.category === 'Skill' && item.level
+        ? item.level
         : null;
+
+  // Quest y Diary muestran su nombre completo
+  const showLabel = item.category === 'Quest' || item.category === 'Diary';
 
   return (
     <div
@@ -75,9 +79,23 @@ function ItemCell({ item }: { item: GItem }) {
         />
       )}
 
-      {sublabel ? (
+      {badge ? (
         <span className="text-[7px] text-amber-400 font-semibold leading-tight">
-          {sublabel}
+          {badge}
+        </span>
+      ) : showLabel ? (
+        <span
+          className="text-zinc-300 leading-tight text-center px-0.5 w-full"
+          style={{
+            fontSize: '6px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            wordBreak: 'break-word',
+          }}
+        >
+          {item.label}
         </span>
       ) : (
         <span className="text-[7px] text-zinc-500 leading-tight truncate max-w-full px-0.5">
