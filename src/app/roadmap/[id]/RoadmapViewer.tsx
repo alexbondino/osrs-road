@@ -213,6 +213,11 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRef = useRef(false);
+
+  // Refs para acceder a los valores más recientes dentro de callbacks con debounce
+  const completedIdsRef = useRef<Set<string>>(new Set());
+  const nodesRef = useRef<Node[]>([]);
 
   const rawNodes = useMemo<Node[]>(
     () => (Array.isArray(roadmap.nodes) ? (roadmap.nodes as Node[]) : []),
@@ -228,35 +233,73 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       data: { ...n.data, completed: false, readOnly: true },
     }))
   );
+  nodesRef.current = nodes;
 
   // Cargar progreso al montar
   useEffect(() => {
     setMounted(true);
     if (!user) return;
-    fetchProgress(user.id, roadmap.id).then(ids => {
-      const idSet = new Set(ids);
-      setCompletedIds(idSet);
-      // Aplicar completed inicial directamente en nodes (un solo render)
-      setNodes(
-        rawNodes.map(n => ({
-          ...n,
-          data: { ...n.data, completed: idSet.has(n.id), readOnly: true },
-        }))
-      );
-    });
+    fetchProgress(user.id, roadmap.id).then(
+      ({ completedNodes, checklistState }) => {
+        const idSet = new Set(completedNodes);
+        setCompletedIds(idSet);
+        completedIdsRef.current = idSet;
+        // Aplicar completed + checklist done states directamente en nodes (un solo render)
+        setNodes(
+          rawNodes.map(n => {
+            const savedDone = checklistState[n.id];
+            const cl = n.data.checklist as
+              | { text: string; done?: boolean }[]
+              | undefined;
+            const updatedChecklist = cl?.map((item, i) => ({
+              ...item,
+              done: savedDone
+                ? (savedDone[i] ?? item.done ?? false)
+                : (item.done ?? false),
+            }));
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                completed: idSet.has(n.id),
+                readOnly: true,
+                ...(updatedChecklist ? { checklist: updatedChecklist } : {}),
+              },
+            };
+          })
+        );
+        initializedRef.current = true;
+      }
+    );
   }, [user, roadmap.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Guardar con debounce de 800ms
-  const persistProgress = useCallback(
-    (next: Set<string>) => {
+  // Guardar con debounce de 800ms — guarda completed nodes Y checklist state
+  const persistAll = useCallback(
+    (completedNext?: Set<string>) => {
       if (!user) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        saveProgress(user.id, roadmap.id, Array.from(next));
+        const ids = completedNext ?? completedIdsRef.current;
+        const checklistState: Record<string, boolean[]> = {};
+        nodesRef.current.forEach(n => {
+          const cl = n.data.checklist as
+            | { text: string; done?: boolean }[]
+            | undefined;
+          if (cl && cl.length > 0) {
+            checklistState[n.id] = cl.map(item => item.done ?? false);
+          }
+        });
+        saveProgress(user.id, roadmap.id, Array.from(ids), checklistState);
       }, 800);
     },
     [user, roadmap.id]
   );
+
+  // Auto-guardar cuando cambia el checklist en algún nodo (después de inicializar)
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    persistAll();
+  }, [nodes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeMouseEnter: NodeMouseHandler = useCallback((_e, node) => {
     const d = node.data as {
@@ -323,11 +366,12 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
         const next = new Set(prev);
         if (next.has(node.id)) next.delete(node.id);
         else next.add(node.id);
-        persistProgress(next);
+        completedIdsRef.current = next;
+        persistAll(next);
         return next;
       });
     },
-    [user, persistProgress, setNodes]
+    [user, persistAll, setNodes]
   );
 
   if (!mounted) {

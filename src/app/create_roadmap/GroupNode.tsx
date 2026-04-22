@@ -217,12 +217,14 @@ function EditModal({
   readOnly,
   onSave,
   onClose,
+  onChecklistChange,
 }: {
   items: GItem[];
   checklist: CheckItem[];
   readOnly?: boolean;
   onSave: (items: GItem[], checklist: CheckItem[]) => void;
   onClose: () => void;
+  onChecklistChange?: (checklist: CheckItem[]) => void;
 }) {
   const [draft, setDraft] = useState<GItem[]>(items);
   const [clDraft, setClDraft] = useState<CheckItem[]>(checklist);
@@ -314,13 +316,13 @@ function EditModal({
               {clDraft.map((task, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      setClDraft(d =>
-                        d.map((t, idx) =>
-                          idx === i ? { ...t, done: !t.done } : t
-                        )
-                      )
-                    }
+                    onClick={() => {
+                      const updated = clDraft.map((t, idx) =>
+                        idx === i ? { ...t, done: !t.done } : t
+                      );
+                      setClDraft(updated);
+                      if (readOnly) onChecklistChange?.(updated);
+                    }}
                     className={`nodrag shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                       task.done
                         ? 'bg-amber-500 border-amber-500'
@@ -533,6 +535,9 @@ export default function GroupNode({
               items: updatedItems,
               checklist: updatedChecklist,
             })
+          }
+          onChecklistChange={
+            readOnly ? cl => updateNodeData(id, { checklist: cl }) : undefined
           }
           onClose={() => setModalOpen(false)}
         />

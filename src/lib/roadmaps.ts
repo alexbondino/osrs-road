@@ -175,26 +175,34 @@ export async function fetchFollowedRoadmaps(
 export async function fetchProgress(
   userId: string,
   roadmapId: string
-): Promise<string[]> {
+): Promise<{
+  completedNodes: string[];
+  checklistState: Record<string, boolean[]>;
+}> {
   const { data } = await supabase
     .from('roadmap_progress')
-    .select('completed_nodes')
+    .select('completed_nodes, checklist_state')
     .eq('user_id', userId)
     .eq('roadmap_id', roadmapId)
     .maybeSingle();
-  return (data?.completed_nodes as string[]) ?? [];
+  return {
+    completedNodes: (data?.completed_nodes as string[]) ?? [],
+    checklistState: (data?.checklist_state as Record<string, boolean[]>) ?? {},
+  };
 }
 
 export async function saveProgress(
   userId: string,
   roadmapId: string,
-  completedNodes: string[]
+  completedNodes: string[],
+  checklistState: Record<string, boolean[]> = {}
 ): Promise<void> {
   const { error } = await supabase.from('roadmap_progress').upsert(
     {
       user_id: userId,
       roadmap_id: roadmapId,
       completed_nodes: completedNodes,
+      checklist_state: checklistState,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id,roadmap_id' }

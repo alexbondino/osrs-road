@@ -204,6 +204,9 @@ export default function ItemNode({
           onSave={(level, qty, cl) =>
             updateNodeData(id, { level, qty, checklist: cl })
           }
+          onChecklistChange={
+            readOnly ? cl => updateNodeData(id, { checklist: cl }) : undefined
+          }
           onClose={() => setChecklistOpen(false)}
         />
       )}
@@ -216,11 +219,13 @@ function ItemEditModal({
   readOnly,
   onSave,
   onClose,
+  onChecklistChange,
 }: {
   data: ItemNodeData;
   readOnly?: boolean;
   onSave: (level: string, qty: string, checklist: CheckItem[]) => void;
   onClose: () => void;
+  onChecklistChange?: (checklist: CheckItem[]) => void;
 }) {
   const isSkill = data.category === 'Skill';
   const isItem = data.category === 'Item';
@@ -373,13 +378,13 @@ function ItemEditModal({
               {clDraft.map((task, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      setClDraft(d =>
-                        d.map((t, idx) =>
-                          idx === i ? { ...t, done: !t.done } : t
-                        )
-                      )
-                    }
+                    onClick={() => {
+                      const updated = clDraft.map((t, idx) =>
+                        idx === i ? { ...t, done: !t.done } : t
+                      );
+                      setClDraft(updated);
+                      if (readOnly) onChecklistChange?.(updated);
+                    }}
                     className={`nodrag shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                       task.done
                         ? 'bg-amber-500 border-amber-500'
