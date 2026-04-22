@@ -274,7 +274,9 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       }[];
       checklist?: { text: string; done?: boolean }[];
     };
-    const pa = node.positionAbsolute ?? node.position;
+    const pa =
+      (node as unknown as { positionAbsolute?: { x: number; y: number } })
+        .positionAbsolute ?? node.position;
     const w = node.measured?.width ?? 140;
     const h = node.measured?.height ?? 130;
     setTooltip({
