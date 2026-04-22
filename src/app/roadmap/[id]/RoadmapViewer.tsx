@@ -223,6 +223,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   // Refs para acceder a los valores más recientes dentro de callbacks con debounce
   const completedIdsRef = useRef<Set<string>>(new Set());
   const nodesRef = useRef<Node[]>([]);
+  const itemProgressRef = useRef<Record<string, string[]>>({});
 
   const rawNodes = useMemo<Node[]>(
     () => (Array.isArray(roadmap.nodes) ? (roadmap.nodes as Node[]) : []),
@@ -250,10 +251,31 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
     setMounted(true);
     if (!user) return;
     fetchProgress(user.id, roadmap.id).then(
-      ({ completedNodes, checklistState }) => {
+      ({ completedNodes, checklistState, itemProgress }) => {
         const idSet = new Set(completedNodes);
         setCompletedIds(idSet);
         completedIdsRef.current = idSet;
+        itemProgressRef.current = itemProgress;
+
+        const makeItemToggle = (nodeId: string) => (label: string) => {
+          const cur = new Set(itemProgressRef.current[nodeId] ?? []);
+          if (cur.has(label)) cur.delete(label);
+          else cur.add(label);
+          const next = Array.from(cur);
+          itemProgressRef.current = {
+            ...itemProgressRef.current,
+            [nodeId]: next,
+          };
+          setNodes(nds =>
+            nds.map(n =>
+              n.id === nodeId
+                ? { ...n, data: { ...n.data, itemCompletedLabels: next } }
+                : n
+            )
+          );
+          persistAllRef.current?.();
+        };
+
         // Aplicar completed + checklist done states directamente en nodes (un solo render)
         setNodes(
           rawNodes.map(n => {
@@ -281,6 +303,12 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
                 onModalClose: () => {
                   suppressTooltipRef.current = false;
                 },
+                ...(n.type === 'groupNode'
+                  ? {
+                      itemCompletedLabels: itemProgress[n.id] ?? [],
+                      onItemToggle: makeItemToggle(n.id),
+                    }
+                  : {}),
                 ...(updatedChecklist ? { checklist: updatedChecklist } : {}),
               },
             };
@@ -291,7 +319,10 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
     );
   }, [user, roadmap.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Guardar con debounce de 800ms — guarda completed nodes Y checklist state
+  // Ref para que makeItemToggle pueda llamar a persistAll sin stale closure
+  const persistAllRef = useRef<(() => void) | null>(null);
+
+  // Guardar con debounce de 800ms — guarda completed nodes Y checklist state Y item progress
   const persistAll = useCallback(
     (completedNext?: Set<string>) => {
       if (!user) return;
@@ -307,11 +338,20 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
             checklistState[n.id] = cl.map(item => item.done ?? false);
           }
         });
-        saveProgress(user.id, roadmap.id, Array.from(ids), checklistState);
+        saveProgress(
+          user.id,
+          roadmap.id,
+          Array.from(ids),
+          checklistState,
+          itemProgressRef.current
+        );
       }, 800);
     },
     [user, roadmap.id]
   );
+
+  // Mantener la ref sincronizada con el último persistAll
+  persistAllRef.current = () => persistAll();
 
   // Auto-guardar cuando cambia el checklist en algún nodo (después de inicializar)
   useEffect(() => {

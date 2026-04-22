@@ -172,12 +172,16 @@ export async function fetchFollowedRoadmaps(
 }
 
 // ── Progreso de nodos completados ───────────────────────────────────────
+// Prefijo usado en checklist_state para guardar item progress de GroupNodes
+const ITEM_PROGRESS_PREFIX = '__i__';
+
 export async function fetchProgress(
   userId: string,
   roadmapId: string
 ): Promise<{
   completedNodes: string[];
   checklistState: Record<string, boolean[]>;
+  itemProgress: Record<string, string[]>;
 }> {
   // Try fetching with checklist_state first; fall back if column doesn't exist.
   const { data, error } = await supabase
@@ -188,10 +192,20 @@ export async function fetchProgress(
     .maybeSingle();
 
   if (!error) {
+    const raw = (data?.checklist_state as Record<string, unknown>) ?? {};
+    const checklistState: Record<string, boolean[]> = {};
+    const itemProgress: Record<string, string[]> = {};
+    Object.entries(raw).forEach(([k, v]) => {
+      if (k.startsWith(ITEM_PROGRESS_PREFIX)) {
+        itemProgress[k.slice(ITEM_PROGRESS_PREFIX.length)] = v as string[];
+      } else {
+        checklistState[k] = v as boolean[];
+      }
+    });
     return {
       completedNodes: (data?.completed_nodes as string[]) ?? [],
-      checklistState:
-        (data?.checklist_state as Record<string, boolean[]>) ?? {},
+      checklistState,
+      itemProgress,
     };
   }
 
@@ -210,6 +224,7 @@ export async function fetchProgress(
   return {
     completedNodes: (data2?.completed_nodes as string[]) ?? [],
     checklistState: {},
+    itemProgress: {},
   };
 }
 
@@ -217,14 +232,21 @@ export async function saveProgress(
   userId: string,
   roadmapId: string,
   completedNodes: string[],
-  checklistState: Record<string, boolean[]> = {}
+  checklistState: Record<string, boolean[]> = {},
+  itemProgress: Record<string, string[]> = {}
 ): Promise<void> {
+  // Merge checklist state and item progress into a single JSONB object
+  const mergedState: Record<string, unknown> = { ...checklistState };
+  Object.entries(itemProgress).forEach(([nodeId, labels]) => {
+    mergedState[`${ITEM_PROGRESS_PREFIX}${nodeId}`] = labels;
+  });
+
   const { error } = await supabase.from('roadmap_progress').upsert(
     {
       user_id: userId,
       roadmap_id: roadmapId,
       completed_nodes: completedNodes,
-      checklist_state: checklistState,
+      checklist_state: mergedState,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id,roadmap_id' }

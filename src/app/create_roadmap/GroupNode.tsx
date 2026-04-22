@@ -19,6 +19,8 @@ interface GroupNodeData {
   checklist?: CheckItem[];
   completed?: boolean;
   readOnly?: boolean;
+  itemCompletedLabels?: string[];
+  onItemToggle?: (label: string) => void;
 }
 
 type CheckItem = { text: string; done?: boolean };
@@ -47,7 +49,13 @@ function resolveIcon(item: GItem): string | null {
   return item.icon_url;
 }
 
-function ItemCell({ item }: { item: GItem | null }) {
+function ItemCell({
+  item,
+  isCompleted,
+}: {
+  item: GItem | null;
+  isCompleted?: boolean;
+}) {
   const [error, setError] = useState(false);
 
   // Celda vacía en el canvas
@@ -117,6 +125,26 @@ function ItemCell({ item }: { item: GItem | null }) {
           {item.category.slice(0, 1)}
         </span>
       )}
+      {/* Tick overlay cuando está completado */}
+      {isCompleted && (
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded"
+          style={{ background: 'rgba(120,53,15,0.45)' }}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -127,8 +155,10 @@ function GridCell({
   item,
   isSelected,
   isDragOver,
+  isCompleted,
   readOnly,
   onSelect,
+  onToggle,
   onDragStart,
   onDragOver,
   onDrop,
@@ -137,8 +167,10 @@ function GridCell({
   item: GItem | null;
   isSelected: boolean;
   isDragOver: boolean;
+  isCompleted?: boolean;
   readOnly?: boolean;
   onSelect: () => void;
+  onToggle?: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -189,14 +221,16 @@ function GridCell({
           : isDragOver
             ? '2px solid #d97706'
             : undefined,
-        backgroundColor: isSelected
-          ? 'rgba(120,53,15,0.4)'
-          : isDragOver
-            ? 'rgba(63,63,70,0.7)'
-            : 'rgba(39,39,42,0.5)',
+        backgroundColor: isCompleted
+          ? 'rgba(120,53,15,0.35)'
+          : isSelected
+            ? 'rgba(120,53,15,0.4)'
+            : isDragOver
+              ? 'rgba(63,63,70,0.7)'
+              : 'rgba(39,39,42,0.5)',
       }}
       draggable={!readOnly}
-      onClick={onSelect}
+      onClick={readOnly ? onToggle : onSelect}
       onDragStart={onDragStart}
       onDragOver={e => {
         e.preventDefault();
@@ -243,6 +277,26 @@ function GridCell({
           {item.category.slice(0, 1)}
         </span>
       )}
+      {/* Tick overlay en modal cuando está completado */}
+      {isCompleted && (
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-lg"
+          style={{ background: 'rgba(120,53,15,0.3)' }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -251,6 +305,8 @@ function EditModal({
   items,
   checklist,
   readOnly,
+  itemCompletedLabels,
+  onItemToggle,
   onSave,
   onClose,
   onChecklistChange,
@@ -258,6 +314,8 @@ function EditModal({
   items: (GItem | null)[];
   checklist: CheckItem[];
   readOnly?: boolean;
+  itemCompletedLabels?: string[];
+  onItemToggle?: (label: string) => void;
   onSave: (items: (GItem | null)[], checklist: CheckItem[]) => void;
   onClose: () => void;
   onChecklistChange?: (checklist: CheckItem[]) => void;
@@ -380,7 +438,9 @@ function EditModal({
             const totalCells = draft.length;
             const gridRows = Math.max(2, Math.ceil(Math.sqrt(totalCells)));
             const gridCols = Math.max(2, Math.ceil(totalCells / gridRows));
-            const sel = selectedIndex !== null ? draft[selectedIndex] : null;
+            const completedSet = new Set(itemCompletedLabels ?? []);
+            const sel =
+              !readOnly && selectedIndex !== null ? draft[selectedIndex] : null;
             return (
               <div className="py-3">
                 <div
@@ -400,12 +460,14 @@ function EditModal({
                       item={item}
                       isSelected={selectedIndex === i}
                       isDragOver={overIndex === i}
+                      isCompleted={item ? completedSet.has(item.label) : false}
                       readOnly={readOnly}
                       onSelect={() =>
                         item
                           ? setSelectedIndex(prev => (prev === i ? null : i))
                           : undefined
                       }
+                      onToggle={() => item && onItemToggle?.(item.label)}
                       onDragStart={() => {
                         dragIndexRef.current = i;
                       }}
@@ -661,6 +723,11 @@ export default function GroupNode({
   const completed = data.completed ?? false;
   const readOnly =
     (data as GroupNodeData & { readOnly?: boolean }).readOnly ?? false;
+  const itemCompletedLabels = data.itemCompletedLabels ?? [];
+  const completedSet = new Set(itemCompletedLabels);
+  const onItemToggle = (
+    data as unknown as { onItemToggle?: (label: string) => void }
+  ).onItemToggle;
 
   // Tamaño de grilla basado en ítems reales (sin nulls)
   const realCount = items.filter(Boolean).length || 1;
@@ -735,7 +802,11 @@ export default function GroupNode({
             }}
           >
             {paddedItems.map((item, i) => (
-              <ItemCell key={i} item={item} />
+              <ItemCell
+                key={i}
+                item={item}
+                isCompleted={item ? completedSet.has(item.label) : false}
+              />
             ))}
           </div>
         </div>
@@ -752,6 +823,8 @@ export default function GroupNode({
           items={items}
           checklist={normalizeChecklist(data.checklist as unknown[])}
           readOnly={readOnly}
+          itemCompletedLabels={itemCompletedLabels}
+          onItemToggle={onItemToggle}
           onSave={(updatedItems, updatedChecklist) =>
             updateNodeData(id, {
               items: updatedItems,
