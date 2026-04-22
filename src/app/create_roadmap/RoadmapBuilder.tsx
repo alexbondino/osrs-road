@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ReactFlow,
@@ -84,8 +84,23 @@ export default function RoadmapBuilder({
   const { user } = useAuth();
   const router = useRouter();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChangeBase] = useEdgesState(initialEdges);
+
+  const onNodesChange: typeof onNodesChangeBase = useCallback(
+    changes => {
+      setIsDirty(true);
+      onNodesChangeBase(changes);
+    },
+    [onNodesChangeBase]
+  );
+  const onEdgesChange: typeof onEdgesChangeBase = useCallback(
+    changes => {
+      setIsDirty(true);
+      onEdgesChangeBase(changes);
+    },
+    [onEdgesChangeBase]
+  );
 
   // Initialize counter above any existing node IDs to avoid collisions
   const idCounterRef = useRef<number>(
@@ -117,6 +132,34 @@ export default function RoadmapBuilder({
     initialThumbnail != null && initialThumbnail !== ''
   );
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Warn on browser refresh / tab close when there are unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  // Intercept in-app navigation clicks when dirty
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!isDirty) return;
+      const anchor = (e.target as HTMLElement).closest('a');
+      if (!anchor || anchor.getAttribute('target') === '_blank') return;
+      const href = anchor.getAttribute('href');
+      if (!href || href.startsWith('#')) return;
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to leave?'
+      );
+      if (!confirmed) e.preventDefault();
+    };
+    window.addEventListener('click', handleClick, true);
+    return () => window.removeEventListener('click', handleClick, true);
+  }, [isDirty]);
   // ref to current dock target — updated on every drag without causing re-renders
   const dockTargetRef = useRef<string | null>(null);
 
@@ -466,10 +509,12 @@ export default function RoadmapBuilder({
       };
       if (roadmapId) {
         await updateRoadmap(roadmapId, payload);
+        setIsDirty(false);
         setSaveMsg({ ok: true, text: 'Saved!' });
         setTimeout(() => setSaveMsg(null), 2500);
       } else {
         const result = await saveRoadmap({ ...payload, user_id: user.id });
+        setIsDirty(false);
         setSaveMsg({ ok: true, text: 'Roadmap saved!' });
         if (result?.id) {
           setTimeout(() => router.push(`/roadmap/${result.id}`), 900);
@@ -567,7 +612,10 @@ export default function RoadmapBuilder({
         </button>
         <input
           value={roadmapName}
-          onChange={e => setRoadmapName(e.target.value)}
+          onChange={e => {
+            setRoadmapName(e.target.value);
+            setIsDirty(true);
+          }}
           className="bg-zinc-800 text-white text-sm font-semibold px-3 py-1.5 rounded-md border border-zinc-600 focus:outline-none focus:border-amber-500 w-56"
           placeholder="Roadmap name"
         />

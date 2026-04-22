@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
@@ -233,6 +233,14 @@ function EditModal({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
   const remove = (i: number) => setDraft(d => d.filter((_, idx) => idx !== i));
@@ -244,15 +252,23 @@ function EditModal({
     setNewTask('');
   };
 
+  const mouseDownOnOverlay = useRef(false);
+
   if (!mounted) return null;
 
   return createPortal(
     <div
       className="fixed inset-0 z-9999 flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-      onClick={e => {
+      onMouseDown={e => {
         e.stopPropagation();
-        if (e.target === e.currentTarget) onClose();
+        mouseDownOnOverlay.current = e.target === e.currentTarget;
+      }}
+      onMouseUp={e => {
+        e.stopPropagation();
+        if (mouseDownOnOverlay.current && e.target === e.currentTarget)
+          onClose();
+        mouseDownOnOverlay.current = false;
       }}
     >
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-80 max-h-[75vh] flex flex-col overflow-hidden">
