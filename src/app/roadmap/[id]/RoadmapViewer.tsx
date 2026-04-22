@@ -64,7 +64,7 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
       style={{
         left: screenPos.x + 8,
         top: screenPos.y,
-        maxWidth: 300,
+        width: 300,
         minHeight: screenHeight,
       }}
     >
@@ -81,35 +81,37 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
       >
         <div className="px-4 py-3 flex flex-col gap-2.5 w-full">
           {/* single item */}
-          {tooltip.nodeType === 'itemNode' && (
-            <div className="flex items-center gap-2.5">
-              {tooltip.icon_url && (
-                <Image
-                  src={tooltip.icon_url}
-                  alt={tooltip.label}
-                  width={28}
-                  height={28}
-                  className="w-7 h-7 object-contain shrink-0"
-                  unoptimized
-                />
-              )}
-              <div className="flex flex-col min-w-0">
-                <span className="text-white font-semibold text-sm leading-tight truncate">
-                  {tooltip.label}
-                </span>
-                {tooltip.category === 'Skill' && tooltip.level && (
-                  <span className="text-amber-400 text-xs mt-0.5">
-                    Lv {tooltip.level}
+          {tooltip.nodeType === 'itemNode' &&
+            (() => {
+              const badge =
+                tooltip.category === 'Skill' && tooltip.level
+                  ? `Lv ${tooltip.level}`
+                  : tooltip.category === 'Item' && tooltip.qty
+                    ? `×${tooltip.qty}`
+                    : null;
+              return (
+                <div className="flex items-center gap-2.5">
+                  {tooltip.icon_url && (
+                    <Image
+                      src={tooltip.icon_url}
+                      alt={tooltip.label}
+                      width={28}
+                      height={28}
+                      className="w-7 h-7 object-contain shrink-0"
+                      unoptimized
+                    />
+                  )}
+                  <span className="text-white font-semibold text-sm flex-1 truncate">
+                    {tooltip.label}
                   </span>
-                )}
-                {tooltip.category === 'Item' && tooltip.qty && (
-                  <span className="text-amber-400 text-xs mt-0.5">
-                    ×{tooltip.qty}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+                  {badge && (
+                    <span className="text-amber-400 text-xs font-semibold shrink-0 ml-1">
+                      {badge}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
           {/* group items list */}
           {tooltip.groupItems && tooltip.groupItems.length > 0 && (
@@ -127,13 +129,13 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
                       <Image
                         src={item.icon_url}
                         alt={item.label}
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 object-contain shrink-0"
+                        width={28}
+                        height={28}
+                        className="w-7 h-7 object-contain shrink-0"
                         unoptimized
                       />
                     ) : (
-                      <div className="w-5 h-5 rounded-md bg-zinc-700 shrink-0" />
+                      <div className="w-7 h-7 rounded-md bg-zinc-700 shrink-0" />
                     )}
                     <span className="text-zinc-100 text-sm flex-1 truncate">
                       {item.label}
@@ -188,7 +190,10 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
     [roadmap.edges]
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    rawNodes.map(n => ({ ...n, data: { ...n.data, completed: false } }))
+    rawNodes.map(n => ({
+      ...n,
+      data: { ...n.data, completed: false, readOnly: true },
+    }))
   );
 
   // Cargar progreso al montar
@@ -202,7 +207,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       setNodes(
         rawNodes.map(n => ({
           ...n,
-          data: { ...n.data, completed: idSet.has(n.id) },
+          data: { ...n.data, completed: idSet.has(n.id), readOnly: true },
         }))
       );
     });

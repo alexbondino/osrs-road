@@ -15,6 +15,7 @@ interface ItemNodeData {
   completed?: boolean;
   _dockHighlight?: boolean;
   checklist?: string[];
+  readOnly?: boolean;
 }
 
 const QUEST_ICON =
@@ -39,6 +40,7 @@ export default function ItemNode({
   const isItem = data.category === 'Item';
   const completed = data.completed ?? false;
   const checklist = data.checklist ?? [];
+  const readOnly = data.readOnly ?? false;
 
   const level = data.level ?? '';
   const qty = data.qty ?? '1';
@@ -68,10 +70,15 @@ export default function ItemNode({
           data._dockHighlight
             ? 'bg-zinc-700 border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
             : completed
-              ? 'bg-amber-900/60 border-amber-500 shadow-amber-900/40'
+              ? 'border-amber-500'
               : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
         }`}
-        style={{ width: 140, height: 130 }}
+        style={{
+          width: 140,
+          height: 130,
+          backgroundColor:
+            completed && !data._dockHighlight ? '#78350f' : undefined,
+        }}
         onDoubleClick={e => {
           if ((e.target as HTMLElement).closest('input')) return;
           e.stopPropagation();
@@ -79,15 +86,6 @@ export default function ItemNode({
         }}
         title="Double-click to edit checklist"
       >
-        {checklist.length > 0 && (
-          <div
-            className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center"
-            style={{ fontSize: '8px', color: '#a1a1aa', zIndex: 10 }}
-            title={`${checklist.length} objective${checklist.length > 1 ? 's' : ''}`}
-          >
-            {checklist.length}
-          </div>
-        )}
         {completed && (
           <div
             className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"
@@ -135,33 +133,47 @@ export default function ItemNode({
 
           {/* Categoría, input level o input qty */}
           {isSkill ? (
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-400 text-[10px]">Lvl</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={level}
-                onChange={handleLevelChange}
-                maxLength={2}
-                style={{ width: '1.6rem' }}
-                className={`nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none transition-colors ${
-                  level === '' ? 'ring-1 ring-red-500' : 'ring-1 ring-amber-500'
-                }`}
-              />
-            </div>
+            readOnly ? (
+              <div className="text-amber-400 text-[10px] font-medium">
+                {level ? `Lv ${level}` : 'Lv ?'}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="text-zinc-400 text-[10px]">Lvl</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={level}
+                  onChange={handleLevelChange}
+                  maxLength={2}
+                  style={{ width: '1.6rem' }}
+                  className={`nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none transition-colors ${
+                    level === ''
+                      ? 'ring-1 ring-red-500'
+                      : 'ring-1 ring-amber-500'
+                  }`}
+                />
+              </div>
+            )
           ) : isItem ? (
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-400 text-[10px]">Qty</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={qty}
-                onChange={handleQtyChange}
-                maxLength={4}
-                style={{ width: '2rem' }}
-                className="nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none ring-1 ring-amber-500 transition-colors"
-              />
-            </div>
+            readOnly ? (
+              <div className="text-amber-400 text-[10px] font-medium">
+                {qty && qty !== '1' ? `×${qty}` : ''}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="text-zinc-400 text-[10px]">Qty</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={qty}
+                  onChange={handleQtyChange}
+                  maxLength={4}
+                  style={{ width: '2rem' }}
+                  className="nodrag bg-zinc-700 text-white text-[11px] text-center rounded py-0.5 focus:outline-none ring-1 ring-amber-500 transition-colors"
+                />
+              </div>
+            )
           ) : (
             <div className="text-amber-400 text-[10px] font-medium">
               {data.category}

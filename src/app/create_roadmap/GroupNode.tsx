@@ -366,10 +366,14 @@ export default function GroupNode({
           highlighted
             ? 'border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)] bg-zinc-700'
             : completed
-              ? 'border-amber-500 bg-amber-900/60 shadow-amber-900/40'
+              ? 'border-amber-500'
               : 'border-zinc-600 bg-zinc-800/90 shadow-xl'
         }`}
-        style={{ width: nodeW, height: nodeH }}
+        style={{
+          width: nodeW,
+          height: nodeH,
+          backgroundColor: completed && !highlighted ? '#78350f' : undefined,
+        }}
         onDoubleClick={e => {
           e.stopPropagation();
           setModalOpen(true);
