@@ -419,7 +419,20 @@ function EditModal({
       }}
       onClick={e => e.stopPropagation()}
     >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-80 max-h-[75vh] flex flex-col overflow-hidden">
+      <div
+        className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        style={{
+          width: Math.max(
+            320,
+            (() => {
+              const tc = draft.length;
+              const gr = Math.max(2, Math.ceil(Math.sqrt(tc)));
+              const gc = Math.max(2, Math.ceil(tc / gr));
+              return gc * MODAL_CELL + (gc - 1) * 4 + 32 + 2;
+            })()
+          ),
+        }}
+      >
         {/* header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 shrink-0">
           <span className="text-white font-semibold text-sm">Edit group</span>
@@ -438,6 +451,7 @@ function EditModal({
             const totalCells = draft.length;
             const gridRows = Math.max(2, Math.ceil(Math.sqrt(totalCells)));
             const gridCols = Math.max(2, Math.ceil(totalCells / gridRows));
+            const gridW = gridCols * MODAL_CELL + (gridCols - 1) * 4;
             const completedSet = new Set(itemCompletedLabels ?? []);
             const sel =
               !readOnly && selectedIndex !== null ? draft[selectedIndex] : null;
@@ -451,7 +465,7 @@ function EditModal({
                     gridTemplateRows: `repeat(${gridRows}, ${MODAL_CELL}px)`,
                     gridAutoFlow: 'column',
                     gap: 4,
-                    width: gridCols * MODAL_CELL + (gridCols - 1) * 4,
+                    width: gridW,
                   }}
                 >
                   {draft.map((item, i) => (
