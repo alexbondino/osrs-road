@@ -116,17 +116,46 @@ function ModalRow({
   readOnly,
   onChange,
   onDelete,
+  isOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   item: GItem;
   readOnly?: boolean;
   onChange: (updated: GItem) => void;
   onDelete: () => void;
+  isOver?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }) {
   const [imgError, setImgError] = useState(false);
   const url = resolveIcon(item);
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-zinc-700 last:border-0">
+    <div
+      className="flex items-center gap-3 py-2 border-b border-zinc-700 last:border-0"
+      draggable={!readOnly}
+      onDragStart={onDragStart}
+      onDragOver={e => {
+        e.preventDefault();
+        onDragOver?.(e);
+      }}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      style={isOver ? { borderTop: '2px solid #f59e0b' } : undefined}
+    >
+      {!readOnly && (
+        <div
+          className="cursor-grab text-zinc-600 hover:text-zinc-400 shrink-0 select-none"
+          title="Drag to reorder"
+        >
+          ⠿
+        </div>
+      )}
       {/* icon */}
       <div className="w-8 h-8 shrink-0 flex items-center justify-center">
         {url && !imgError ? (
@@ -230,6 +259,8 @@ function EditModal({
   const [clDraft, setClDraft] = useState<CheckItem[]>(checklist);
   const [newTask, setNewTask] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -246,6 +277,19 @@ function EditModal({
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
   const remove = (i: number) => setDraft(d => d.filter((_, idx) => idx !== i));
+
+  const handleDrop = (i: number) => {
+    const from = dragIndexRef.current;
+    dragIndexRef.current = null;
+    setOverIndex(null);
+    if (from === null || from === i) return;
+    setDraft(d => {
+      const next = [...d];
+      const [moved] = next.splice(from, 1);
+      next.splice(i, 0, moved);
+      return next;
+    });
+  };
 
   const addTask = () => {
     const t = newTask.trim();
@@ -299,6 +343,16 @@ function EditModal({
                 readOnly={readOnly}
                 onChange={updated => update(i, updated)}
                 onDelete={() => remove(i)}
+                isOver={overIndex === i}
+                onDragStart={() => {
+                  dragIndexRef.current = i;
+                }}
+                onDragOver={() => setOverIndex(i)}
+                onDrop={() => handleDrop(i)}
+                onDragEnd={() => {
+                  dragIndexRef.current = null;
+                  setOverIndex(null);
+                }}
               />
             ))
           )}
