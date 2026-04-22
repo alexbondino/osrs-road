@@ -512,6 +512,7 @@ export default function RoadmapBuilder({
         source: String(e.source),
         target: String(e.target),
         ...(e.type != null ? { type: String(e.type) } : {}),
+        ...(e.data?.mx != null ? { data: { mx: Number(e.data.mx) } } : {}),
       }));
       const payload = {
         name: roadmapName.trim() || 'My Roadmap',
