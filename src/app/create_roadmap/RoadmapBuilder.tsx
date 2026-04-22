@@ -17,6 +17,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import ItemNode from './ItemNode';
+import GroupNode from './GroupNode';
+import type { GItem } from './GroupNode';
 import MidpointEdge from './MidpointEdge';
 import AlignmentGuides, { type Guide } from './AlignmentGuides';
 import Sidebar from './Sidebar';
@@ -30,7 +32,7 @@ const NODE_WIDTH = 140;
 const NODE_HEIGHT = 130;
 const SNAP_THRESHOLD = 6;
 
-const nodeTypes = { itemNode: ItemNode };
+const nodeTypes = { itemNode: ItemNode, groupNode: GroupNode };
 const edgeTypes = { midpoint: MidpointEdge };
 
 let idCounter = 1;
@@ -101,6 +103,8 @@ export default function RoadmapBuilder({
   // true only when the user explicitly picked a cover in this session
   const [coverConfirmed, setCoverConfirmed] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // ref to current dock target — updated on every drag without causing re-renders
+  const dockTargetRef = useRef<string | null>(null);
 
   const onConnect: OnConnect = useCallback(
     connection =>
@@ -127,6 +131,37 @@ export default function RoadmapBuilder({
       const dR = dx + dW;
       const dB = dy + dH;
 
+      // ── Dock detection (priority over alignment snap) ──────────────
+      let newDockTarget: string | null = null;
+      for (const n of nodes) {
+        if (n.id === draggedNode.id) continue;
+        const nW = n.measured?.width ?? NODE_WIDTH;
+        const nH = n.measured?.height ?? NODE_HEIGHT;
+        const nL = n.position.x;
+        const nT = n.position.y;
+        if (dCX > nL && dCX < nL + nW && dCY > nT && dCY < nT + nH) {
+          newDockTarget = n.id;
+          break;
+        }
+      }
+
+      // only call setNodes when the dock target changes
+      if (newDockTarget !== dockTargetRef.current) {
+        dockTargetRef.current = newDockTarget;
+        setNodes(nds =>
+          nds.map(n => ({
+            ...n,
+            data: { ...n.data, _dockHighlight: n.id === newDockTarget },
+          }))
+        );
+      }
+
+      if (newDockTarget) {
+        setGuides([]);
+        return; // skip alignment guides when docking
+      }
+
+      // ── Alignment guide snap ───────────────────────────────────────
       const newGuides: Guide[] = [];
       const seenH = new Set<number>();
       const seenV = new Set<number>();
@@ -200,6 +235,73 @@ export default function RoadmapBuilder({
   const onNodeDragStop = useCallback(
     (_: React.MouseEvent, draggedNode: Node) => {
       setGuides([]);
+
+      // Clear all dock highlights
+      setNodes(nds =>
+        nds.map(n => ({ ...n, data: { ...n.data, _dockHighlight: false } }))
+      );
+
+      const currentDockTarget = dockTargetRef.current;
+      dockTargetRef.current = null;
+
+      if (currentDockTarget) {
+        // ── Merge dragged node into target ──────────────────────────
+        const extractItems = (node: Node): GItem[] => {
+          if (node.type === 'groupNode') {
+            return (node.data as { items?: GItem[] }).items ?? [];
+          }
+          const d = node.data as Record<string, unknown>;
+          return [
+            {
+              label: String(d.label ?? ''),
+              icon_url: d.icon_url != null ? String(d.icon_url) : null,
+              category: String(d.category ?? ''),
+              ...(d.level != null ? { level: String(d.level) } : {}),
+              ...(d.qty != null ? { qty: String(d.qty) } : {}),
+            },
+          ];
+        };
+
+        const draggedItems = extractItems(draggedNode);
+
+        setNodes(nds => {
+          const target = nds.find(n => n.id === currentDockTarget);
+          if (!target) return nds;
+          const mergedItems: GItem[] = [
+            ...extractItems(target),
+            ...draggedItems,
+          ];
+          return nds
+            .filter(n => n.id !== draggedNode.id)
+            .map(n =>
+              n.id === currentDockTarget
+                ? { ...n, type: 'groupNode', data: { items: mergedItems } }
+                : n
+            );
+        });
+
+        // Redirect edges from dragged node to the new group node
+        setEdges(eds =>
+          eds
+            .filter(
+              e =>
+                !(
+                  e.source === draggedNode.id && e.target === currentDockTarget
+                ) &&
+                !(e.source === currentDockTarget && e.target === draggedNode.id)
+            )
+            .map(e => ({
+              ...e,
+              source:
+                e.source === draggedNode.id ? currentDockTarget : e.source,
+              target:
+                e.target === draggedNode.id ? currentDockTarget : e.target,
+            }))
+        );
+        return;
+      }
+
+      // ── Normal final alignment snap ──────────────────────────────
       const dW = draggedNode.measured?.width ?? NODE_WIDTH;
       const dH = draggedNode.measured?.height ?? NODE_HEIGHT;
       const dx = draggedNode.position.x;
@@ -262,7 +364,7 @@ export default function RoadmapBuilder({
         );
       }
     },
-    [nodes, setNodes]
+    [nodes, setNodes, setEdges]
   );
 
   const handleSave = async (overrideThumbnail?: string) => {
@@ -291,6 +393,23 @@ export default function RoadmapBuilder({
       // roadmaps.ts uses raw fetch + safeStringify so postgrest-js never
       // touches these objects, but we still sanitize here for clean DB data.
       const safeNodes = nodes.map(n => {
+        if (n.type === 'groupNode') {
+          const d = n.data as { items?: GItem[] };
+          return {
+            id: String(n.id),
+            type: 'groupNode',
+            position: { x: Number(n.position.x), y: Number(n.position.y) },
+            data: {
+              items: (d.items ?? []).map(item => ({
+                label: String(item.label ?? ''),
+                icon_url: item.icon_url != null ? String(item.icon_url) : null,
+                category: String(item.category ?? ''),
+                ...(item.level != null ? { level: String(item.level) } : {}),
+                ...(item.qty != null ? { qty: String(item.qty) } : {}),
+              })),
+            },
+          };
+        }
         const d = n.data as Record<string, unknown>;
         return {
           id: String(n.id),

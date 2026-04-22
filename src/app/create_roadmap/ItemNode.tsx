@@ -12,6 +12,7 @@ interface ItemNodeData {
   level?: string;
   qty?: string;
   completed?: boolean;
+  _dockHighlight?: boolean;
 }
 
 const QUEST_ICON =
@@ -58,10 +59,12 @@ export default function ItemNode({
 
   return (
     <div
-      className={`relative border-2 rounded-xl shadow-xl transition-colors ${
-        completed
-          ? 'bg-amber-950 border-amber-500 shadow-amber-900/40'
-          : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
+      className={`relative border-2 rounded-xl shadow-xl transition-all ${
+        data._dockHighlight
+          ? 'bg-zinc-700 border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
+          : completed
+            ? 'bg-amber-950 border-amber-500 shadow-amber-900/40'
+            : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
       }`}
       style={{ width: 140, height: 130 }}
     >
