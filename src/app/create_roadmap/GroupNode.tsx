@@ -16,6 +16,7 @@ export interface GItem {
 interface GroupNodeData {
   items: GItem[];
   _dockHighlight?: boolean;
+  checklist?: string[];
 }
 
 const QUEST_ICON =
@@ -36,7 +37,6 @@ function resolveIcon(item: GItem): string | null {
 
 function ItemCell({ item }: { item: GItem }) {
   const [error, setError] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const url = resolveIcon(item);
 
   // badge numérico para Item y Skill
@@ -54,15 +54,7 @@ function ItemCell({ item }: { item: GItem }) {
     <div
       className="relative flex flex-col items-center justify-center gap-0.5"
       style={{ width: CELL_W, height: CELL_H }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
-      {hovered && !showLabel && (
-        <div className="absolute z-50 bottom-full mb-1 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-600 rounded px-1.5 py-0.5 text-[9px] text-white whitespace-nowrap shadow-lg pointer-events-none">
-          {item.label}
-        </div>
-      )}
-
       {!url || error ? (
         <div className="w-6 h-6 rounded bg-zinc-600 flex items-center justify-center text-[9px] text-zinc-400">
           ?
@@ -194,14 +186,18 @@ function ModalRow({
 
 function EditModal({
   items,
+  checklist,
   onSave,
   onClose,
 }: {
   items: GItem[];
-  onSave: (items: GItem[]) => void;
+  checklist: string[];
+  onSave: (items: GItem[], checklist: string[]) => void;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<GItem[]>(items);
+  const [clDraft, setClDraft] = useState<string[]>(checklist);
+  const [newTask, setNewTask] = useState('');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -210,8 +206,14 @@ function EditModal({
 
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
-
   const remove = (i: number) => setDraft(d => d.filter((_, idx) => idx !== i));
+
+  const addTask = () => {
+    const t = newTask.trim();
+    if (!t) return;
+    setClDraft(d => [...d, t]);
+    setNewTask('');
+  };
 
   if (!mounted) return null;
 
@@ -223,7 +225,7 @@ function EditModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-80 max-h-[70vh] flex flex-col overflow-hidden">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-80 max-h-[75vh] flex flex-col overflow-hidden">
         {/* header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 shrink-0">
           <span className="text-white font-semibold text-sm">Edit group</span>
@@ -235,10 +237,11 @@ function EditModal({
           </button>
         </div>
 
-        {/* list */}
+        {/* single scrollable body: items + checklist */}
         <div className="flex-1 overflow-y-auto px-4">
+          {/* items */}
           {draft.length === 0 ? (
-            <p className="text-zinc-500 text-xs text-center py-6">No items</p>
+            <p className="text-zinc-500 text-xs text-center py-4">No items</p>
           ) : (
             draft.map((item, i) => (
               <ModalRow
@@ -249,6 +252,63 @@ function EditModal({
               />
             ))
           )}
+
+          {/* checklist section */}
+          <div className="mt-2 mb-2">
+            <div className="flex items-center gap-2 py-2 border-t border-zinc-700">
+              <span className="text-zinc-400 text-[10px] font-semibold uppercase tracking-wider">
+                Checklist
+              </span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {clDraft.length === 0 && (
+                <p className="text-zinc-600 text-xs py-1">No objectives yet</p>
+              )}
+              {clDraft.map((task, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={task}
+                    onChange={e =>
+                      setClDraft(d =>
+                        d.map((t, idx) => (idx === i ? e.target.value : t))
+                      )
+                    }
+                    className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    onClick={() =>
+                      setClDraft(d => d.filter((_, idx) => idx !== i))
+                    }
+                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-700 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={e => setNewTask(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTask();
+                    }
+                  }}
+                  placeholder="New objective…"
+                  className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-600"
+                />
+                <button
+                  onClick={addTask}
+                  className="shrink-0 px-2 py-1 rounded text-xs bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* footer */}
@@ -261,7 +321,7 @@ function EditModal({
           </button>
           <button
             onClick={() => {
-              onSave(draft);
+              onSave(draft, clDraft);
               onClose();
             }}
             className="flex-1 py-1.5 rounded-md text-xs font-semibold bg-amber-500 text-zinc-900 hover:bg-amber-400 transition-colors"
@@ -346,7 +406,13 @@ export default function GroupNode({
       {modalOpen && (
         <EditModal
           items={items}
-          onSave={updated => updateNodeData(id, { items: updated })}
+          checklist={data.checklist ?? []}
+          onSave={(updatedItems, updatedChecklist) =>
+            updateNodeData(id, {
+              items: updatedItems,
+              checklist: updatedChecklist,
+            })
+          }
           onClose={() => setModalOpen(false)}
         />
       )}

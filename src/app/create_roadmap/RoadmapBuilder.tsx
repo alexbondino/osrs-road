@@ -427,6 +427,7 @@ export default function RoadmapBuilder({
                 ...(item.level != null ? { level: String(item.level) } : {}),
                 ...(item.qty != null ? { qty: String(item.qty) } : {}),
               })),
+              checklist: (d.checklist ?? []).map(String),
             },
           };
         }
@@ -444,6 +445,9 @@ export default function RoadmapBuilder({
             ...(d?.qty != null ? { qty: String(d.qty) } : {}),
             ...(d?.completed != null
               ? { completed: Boolean(d.completed) }
+              : {}),
+            ...(Array.isArray(d?.checklist)
+              ? { checklist: (d.checklist as unknown[]).map(String) }
               : {}),
           },
         };
