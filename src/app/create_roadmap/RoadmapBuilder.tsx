@@ -414,7 +414,7 @@ export default function RoadmapBuilder({
       // touches these objects, but we still sanitize here for clean DB data.
       const safeNodes = nodes.map(n => {
         if (n.type === 'groupNode') {
-          const d = n.data as { items?: GItem[] };
+          const d = n.data as { items?: GItem[]; checklist?: unknown[] };
           return {
             id: String(n.id),
             type: 'groupNode',
