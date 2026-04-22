@@ -77,16 +77,19 @@ export default function ItemNode({
       <div
         className={`relative border-2 rounded-xl shadow-xl transition-all ${
           data._dockHighlight
-            ? 'bg-zinc-700 border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
+            ? 'border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
             : completed
               ? 'border-amber-500'
-              : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
+              : 'border-zinc-600 hover:border-amber-500'
         }`}
         style={{
           width: 140,
           height: 130,
-          backgroundColor:
-            completed && !data._dockHighlight ? '#78350f' : undefined,
+          backgroundColor: data._dockHighlight
+            ? '#3f3f46'
+            : completed
+              ? '#78350f'
+              : '#27272a',
         }}
         onDoubleClick={e => {
           if ((e.target as HTMLElement).closest('input')) return;

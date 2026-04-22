@@ -179,15 +179,37 @@ export async function fetchProgress(
   completedNodes: string[];
   checklistState: Record<string, boolean[]>;
 }> {
-  const { data } = await supabase
+  // Try fetching with checklist_state first; fall back if column doesn't exist.
+  const { data, error } = await supabase
     .from('roadmap_progress')
     .select('completed_nodes, checklist_state')
     .eq('user_id', userId)
     .eq('roadmap_id', roadmapId)
     .maybeSingle();
+
+  if (!error) {
+    return {
+      completedNodes: (data?.completed_nodes as string[]) ?? [],
+      checklistState:
+        (data?.checklist_state as Record<string, boolean[]>) ?? {},
+    };
+  }
+
+  // Fallback: column checklist_state may not exist yet — fetch only completed_nodes.
+  console.warn(
+    '[fetchProgress] retrying without checklist_state:',
+    error.message
+  );
+  const { data: data2, error: error2 } = await supabase
+    .from('roadmap_progress')
+    .select('completed_nodes')
+    .eq('user_id', userId)
+    .eq('roadmap_id', roadmapId)
+    .maybeSingle();
+  if (error2) console.error('[fetchProgress]', error2.message);
   return {
-    completedNodes: (data?.completed_nodes as string[]) ?? [],
-    checklistState: (data?.checklist_state as Record<string, boolean[]>) ?? {},
+    completedNodes: (data2?.completed_nodes as string[]) ?? [],
+    checklistState: {},
   };
 }
 
@@ -207,5 +229,22 @@ export async function saveProgress(
     },
     { onConflict: 'user_id,roadmap_id' }
   );
-  if (error) throw error;
+
+  if (!error) return;
+
+  // Fallback: checklist_state column may not exist — save only completed_nodes.
+  console.warn(
+    '[saveProgress] retrying without checklist_state:',
+    error.message
+  );
+  const { error: error2 } = await supabase.from('roadmap_progress').upsert(
+    {
+      user_id: userId,
+      roadmap_id: roadmapId,
+      completed_nodes: completedNodes,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,roadmap_id' }
+  );
+  if (error2) console.error('[saveProgress]', error2.message);
 }

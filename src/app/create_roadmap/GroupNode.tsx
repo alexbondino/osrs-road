@@ -465,15 +465,19 @@ export default function GroupNode({
       <div
         className={`relative border-2 rounded-xl transition-all ${
           highlighted
-            ? 'border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)] bg-zinc-700'
+            ? 'border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
             : completed
               ? 'border-amber-500'
-              : 'border-zinc-600 bg-zinc-800/90 shadow-xl'
+              : 'border-zinc-600 shadow-xl'
         }`}
         style={{
           width: nodeW,
           height: nodeH,
-          backgroundColor: completed && !highlighted ? '#78350f' : undefined,
+          backgroundColor: highlighted
+            ? '#3f3f46'
+            : completed
+              ? '#78350f'
+              : 'rgba(39,39,42,0.9)',
         }}
         onDoubleClick={e => {
           e.stopPropagation();

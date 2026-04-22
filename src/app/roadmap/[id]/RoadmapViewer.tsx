@@ -235,7 +235,12 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(
     rawNodes.map(n => ({
       ...n,
-      data: { ...n.data, completed: false, readOnly: true },
+      data: {
+        ...n.data,
+        completed: false,
+        readOnly: true,
+        _dockHighlight: false,
+      },
     }))
   );
   nodesRef.current = nodes;
@@ -268,6 +273,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
                 ...n.data,
                 completed: idSet.has(n.id),
                 readOnly: true,
+                _dockHighlight: false,
                 onModalOpen: () => {
                   setTooltip(null);
                   suppressTooltipRef.current = true;
