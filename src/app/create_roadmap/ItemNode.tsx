@@ -14,8 +14,17 @@ interface ItemNodeData {
   qty?: string;
   completed?: boolean;
   _dockHighlight?: boolean;
-  checklist?: string[];
+  checklist?: CheckItem[];
   readOnly?: boolean;
+}
+
+type CheckItem = { text: string; done?: boolean };
+
+function normalizeChecklist(raw: unknown[] | undefined): CheckItem[] {
+  if (!raw) return [];
+  return raw.map(item =>
+    typeof item === 'string' ? { text: item, done: false } : (item as CheckItem)
+  );
 }
 
 const QUEST_ICON =
@@ -39,7 +48,7 @@ export default function ItemNode({
   const isDiary = data.category === 'Diary';
   const isItem = data.category === 'Item';
   const completed = data.completed ?? false;
-  const checklist = data.checklist ?? [];
+  const checklist = normalizeChecklist(data.checklist as unknown[]);
   const readOnly = data.readOnly ?? false;
 
   const level = data.level ?? '';
@@ -191,6 +200,7 @@ export default function ItemNode({
       {checklistOpen && (
         <ItemEditModal
           data={data}
+          readOnly={readOnly}
           onSave={(level, qty, cl) =>
             updateNodeData(id, { level, qty, checklist: cl })
           }
@@ -203,18 +213,22 @@ export default function ItemNode({
 
 function ItemEditModal({
   data,
+  readOnly,
   onSave,
   onClose,
 }: {
   data: ItemNodeData;
-  onSave: (level: string, qty: string, checklist: string[]) => void;
+  readOnly?: boolean;
+  onSave: (level: string, qty: string, checklist: CheckItem[]) => void;
   onClose: () => void;
 }) {
   const isSkill = data.category === 'Skill';
   const isItem = data.category === 'Item';
   const [level, setLevel] = useState(data.level ?? '');
   const [qty, setQty] = useState(data.qty ?? '1');
-  const [clDraft, setClDraft] = useState<string[]>(data.checklist ?? []);
+  const [clDraft, setClDraft] = useState<CheckItem[]>(
+    normalizeChecklist(data.checklist as unknown[])
+  );
   const [newTask, setNewTask] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -225,7 +239,7 @@ function ItemEditModal({
   const addTask = () => {
     const t = newTask.trim();
     if (!t) return;
-    setClDraft(d => [...d, t]);
+    setClDraft(d => [...d, { text: t, done: false }]);
     setNewTask('');
   };
 
@@ -236,6 +250,7 @@ function ItemEditModal({
       className="fixed inset-0 z-9999 flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => {
+        e.stopPropagation();
         if (e.target === e.currentTarget) onClose();
       }}
     >
@@ -267,20 +282,29 @@ function ItemEditModal({
                   unoptimized
                 />
               )}
-              <span className="text-zinc-400 text-xs flex-1">Lv</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={level}
-                maxLength={2}
-                onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  const max = data.max_level ?? 99;
-                  if (val === '' || (Number(val) >= 1 && Number(val) <= max))
-                    setLevel(val);
-                }}
-                className="w-16 bg-zinc-700 text-white text-sm text-center rounded py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
-              />
+              <span className="text-white text-xs font-medium flex-1 truncate">
+                {data.label}
+              </span>
+              <span className="text-zinc-400 text-xs">Lv</span>
+              {readOnly ? (
+                <span className="text-white text-sm font-semibold">
+                  {level || '—'}
+                </span>
+              ) : (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={level}
+                  maxLength={2}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const max = data.max_level ?? 99;
+                    if (val === '' || (Number(val) >= 1 && Number(val) <= max))
+                      setLevel(val);
+                  }}
+                  className="w-16 bg-zinc-700 text-white text-sm text-center rounded py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                />
+              )}
             </div>
           )}
           {isItem && (
@@ -295,18 +319,27 @@ function ItemEditModal({
                   unoptimized
                 />
               )}
-              <span className="text-zinc-400 text-xs flex-1">Qty</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={qty}
-                maxLength={6}
-                onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  if (val === '' || Number(val) >= 1) setQty(val);
-                }}
-                className="w-20 bg-zinc-700 text-white text-sm text-center rounded py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
-              />
+              <span className="text-white text-xs font-medium flex-1 truncate">
+                {data.label}
+              </span>
+              <span className="text-zinc-400 text-xs">Qty</span>
+              {readOnly ? (
+                <span className="text-white text-sm font-semibold">
+                  {qty || '—'}
+                </span>
+              ) : (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={qty}
+                  maxLength={6}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    if (val === '' || Number(val) >= 1) setQty(val);
+                  }}
+                  className="w-20 bg-zinc-700 text-white text-sm text-center rounded py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                />
+              )}
             </div>
           )}
 
@@ -323,68 +356,118 @@ function ItemEditModal({
               )}
               {clDraft.map((task, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={task}
-                    onChange={e =>
-                      setClDraft(d =>
-                        d.map((t, idx) => (idx === i ? e.target.value : t))
-                      )
-                    }
-                    className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
-                  />
                   <button
                     onClick={() =>
-                      setClDraft(d => d.filter((_, idx) => idx !== i))
+                      setClDraft(d =>
+                        d.map((t, idx) =>
+                          idx === i ? { ...t, done: !t.done } : t
+                        )
+                      )
                     }
-                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-700 transition-colors"
+                    className={`nodrag shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      task.done
+                        ? 'bg-amber-500 border-amber-500'
+                        : 'border-zinc-500 hover:border-amber-400'
+                    }`}
+                    style={{
+                      fontSize: '10px',
+                      color: '#1c1917',
+                      fontWeight: 700,
+                    }}
                   >
-                    ✕
+                    {task.done ? '\u2713' : ''}
                   </button>
+                  {readOnly ? (
+                    <span
+                      className={`flex-1 text-xs leading-snug ${
+                        task.done
+                          ? 'text-zinc-500 line-through'
+                          : 'text-zinc-200'
+                      }`}
+                    >
+                      {task.text}
+                    </span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={task.text}
+                      onChange={e =>
+                        setClDraft(d =>
+                          d.map((t, idx) =>
+                            idx === i ? { ...t, text: e.target.value } : t
+                          )
+                        )
+                      }
+                      className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                    />
+                  )}
+                  {!readOnly && (
+                    <button
+                      onClick={() =>
+                        setClDraft(d => d.filter((_, idx) => idx !== i))
+                      }
+                      className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-700 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={e => setNewTask(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTask();
-                    }
-                  }}
-                  placeholder="New objective…"
-                  className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-600"
-                />
-                <button
-                  onClick={addTask}
-                  className="shrink-0 px-2 py-1 rounded text-xs bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors"
-                >
-                  + Add
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={newTask}
+                    onChange={e => setNewTask(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTask();
+                      }
+                    }}
+                    placeholder="New objective…"
+                    className="flex-1 bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-600 focus:outline-none focus:border-amber-500 placeholder:text-zinc-600"
+                  />
+                  <button
+                    onClick={addTask}
+                    className="shrink-0 px-2 py-1 rounded text-xs bg-amber-500 text-zinc-900 font-semibold hover:bg-amber-400 transition-colors"
+                  >
+                    + Add
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* footer */}
         <div className="flex gap-2 px-4 py-3 border-t border-zinc-700 shrink-0">
-          <button
-            onClick={onClose}
-            className="flex-1 py-1.5 rounded-md text-xs text-zinc-300 border border-zinc-600 hover:bg-zinc-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              onSave(level, qty, clDraft);
-              onClose();
-            }}
-            className="flex-1 py-1.5 rounded-md text-xs font-semibold bg-amber-500 text-zinc-900 hover:bg-amber-400 transition-colors"
-          >
-            Save
-          </button>
+          {readOnly ? (
+            <button
+              onClick={onClose}
+              className="flex-1 py-1.5 rounded-md text-xs font-semibold bg-amber-500 text-zinc-900 hover:bg-amber-400 transition-colors"
+            >
+              Close
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="flex-1 py-1.5 rounded-md text-xs text-zinc-300 border border-zinc-600 hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onSave(level, qty, clDraft);
+                  onClose();
+                }}
+                className="flex-1 py-1.5 rounded-md text-xs font-semibold bg-amber-500 text-zinc-900 hover:bg-amber-400 transition-colors"
+              >
+                Save
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,

@@ -26,6 +26,20 @@ import { useAuth } from '@/hooks/useAuth';
 const nodeTypes = { itemNode: ItemNode, groupNode: GroupNode };
 const edgeTypes = { midpoint: SmoothStepEdge };
 
+const QUEST_ICON =
+  'https://oldschool.runescape.wiki/images/Quest_point_icon.png';
+const DIARY_ICON =
+  'https://oldschool.runescape.wiki/images/Achievement_Diaries.png';
+
+function resolveIcon(
+  icon_url: string | null | undefined,
+  category?: string
+): string | null {
+  if (category === 'Quest') return QUEST_ICON;
+  if (category === 'Diary') return DIARY_ICON;
+  return icon_url ?? null;
+}
+
 type TooltipData = {
   label: string;
   nodeType: string;
@@ -40,7 +54,7 @@ type TooltipData = {
     level?: string;
     qty?: string;
   }[];
-  checklist?: string[];
+  checklist?: { text: string; done?: boolean }[];
   flowRight: number;
   flowTop: number;
   flowHeight: number;
@@ -157,10 +171,29 @@ function TooltipOverlay({ tooltip }: { tooltip: TooltipData | null }) {
               <div className="border-t border-zinc-700/60 mt-1" />
               <div className="flex flex-col gap-2 mt-1">
                 {tooltip.checklist.map((task, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-                    <span className="text-zinc-300 text-sm leading-snug">
-                      {task}
+                  <div key={i} className="flex items-center gap-2">
+                    <span
+                      className="shrink-0 w-4 h-4 rounded flex items-center justify-center"
+                      style={{
+                        backgroundColor: task.done ? '#f59e0b' : 'transparent',
+                        border: task.done
+                          ? '2px solid #f59e0b'
+                          : '2px solid #52525b',
+                        fontSize: '9px',
+                        color: '#1c1917',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {task.done ? '\u2713' : ''}
+                    </span>
+                    <span
+                      className={`text-sm leading-snug ${
+                        task.done
+                          ? 'text-zinc-500 line-through'
+                          : 'text-zinc-300'
+                      }`}
+                    >
+                      {task.text}
                     </span>
                   </div>
                 ))}
@@ -239,7 +272,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
         level?: string;
         qty?: string;
       }[];
-      checklist?: string[];
+      checklist?: { text: string; done?: boolean }[];
     };
     const pa = node.positionAbsolute ?? node.position;
     const w = node.measured?.width ?? 140;
@@ -247,12 +280,22 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
     setTooltip({
       label: d.label ?? 'Group',
       nodeType: node.type ?? 'itemNode',
-      icon_url: d.icon_url,
+      icon_url: resolveIcon(d.icon_url, d.category),
       category: d.category,
       level: d.level,
       qty: d.qty,
-      groupItems: node.type === 'groupNode' ? (d.items ?? []) : undefined,
-      checklist: d.checklist ?? [],
+      groupItems:
+        node.type === 'groupNode'
+          ? (d.items ?? []).map(it => ({
+              ...it,
+              icon_url: resolveIcon(it.icon_url, it.category),
+            }))
+          : undefined,
+      checklist: ((d.checklist ?? []) as unknown[]).map(item =>
+        typeof item === 'string'
+          ? { text: item, done: false }
+          : (item as { text: string; done?: boolean })
+      ),
       flowRight: pa.x + w,
       flowTop: pa.y,
       flowHeight: h,
