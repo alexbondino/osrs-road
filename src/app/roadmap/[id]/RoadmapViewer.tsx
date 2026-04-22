@@ -13,11 +13,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import ItemNode from '@/app/create_roadmap/ItemNode';
+import GroupNode from '@/app/create_roadmap/GroupNode';
 import type { Roadmap } from '@/lib/roadmaps';
 import { fetchProgress, saveProgress } from '@/lib/roadmaps';
 import { useAuth } from '@/hooks/useAuth';
 
-const nodeTypes = { itemNode: ItemNode };
+const nodeTypes = { itemNode: ItemNode, groupNode: GroupNode };
 const edgeTypes = { midpoint: SmoothStepEdge };
 
 export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
