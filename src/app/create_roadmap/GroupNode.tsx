@@ -14,7 +14,7 @@ export interface GItem {
 }
 
 interface GroupNodeData {
-  items: GItem[];
+  items: (GItem | null)[];
   _dockHighlight?: boolean;
   checklist?: CheckItem[];
   completed?: boolean;
@@ -39,6 +39,7 @@ const CELL_W = 62;
 const CELL_H = 57;
 const H_PAD = 16;
 const V_PAD = 16;
+const MODAL_CELL = 72;
 
 function resolveIcon(item: GItem): string | null {
   if (item.category === 'Quest') return QUEST_ICON;
@@ -46,8 +47,19 @@ function resolveIcon(item: GItem): string | null {
   return item.icon_url;
 }
 
-function ItemCell({ item }: { item: GItem }) {
+function ItemCell({ item }: { item: GItem | null }) {
   const [error, setError] = useState(false);
+
+  // Celda vacía en el canvas
+  if (!item) {
+    return (
+      <div
+        className="relative flex flex-col items-center justify-center"
+        style={{ width: CELL_W, height: CELL_H }}
+      />
+    );
+  }
+
   const url = resolveIcon(item);
 
   // badge numérico para Item y Skill
@@ -111,130 +123,125 @@ function ItemCell({ item }: { item: GItem }) {
 
 // ── Edit modal ──────────────────────────────────────────────────────────────
 
-function ModalRow({
+function GridCell({
   item,
+  isSelected,
+  isDragOver,
   readOnly,
-  onChange,
-  onDelete,
-  isOver,
+  onSelect,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
 }: {
-  item: GItem;
+  item: GItem | null;
+  isSelected: boolean;
+  isDragOver: boolean;
   readOnly?: boolean;
-  onChange: (updated: GItem) => void;
-  onDelete: () => void;
-  isOver?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
+  onSelect: () => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragEnd: (e: React.DragEvent) => void;
 }) {
   const [imgError, setImgError] = useState(false);
+
+  // Celda vacía
+  if (!item) {
+    return (
+      <div
+        className="rounded-lg transition-all"
+        style={{
+          width: MODAL_CELL,
+          height: MODAL_CELL,
+          border: isDragOver
+            ? '2px solid #f59e0b'
+            : '2px dashed rgba(63,63,70,0.5)',
+          backgroundColor: isDragOver ? 'rgba(120,53,15,0.2)' : 'transparent',
+        }}
+        onDragOver={e => {
+          e.preventDefault();
+          onDragOver(e);
+        }}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
+      />
+    );
+  }
+
   const url = resolveIcon(item);
+  const badge =
+    item.category === 'Item'
+      ? (item.qty ?? '1')
+      : item.category === 'Skill' && item.level
+        ? item.level
+        : null;
+  const showLabel = item.category === 'Quest' || item.category === 'Diary';
 
   return (
     <div
-      className="flex items-center gap-3 py-2 border-b border-zinc-700 last:border-0"
+      className="relative flex flex-col items-center justify-center gap-1 rounded-lg cursor-pointer transition-all select-none"
+      style={{
+        width: MODAL_CELL,
+        height: MODAL_CELL,
+        outline: isSelected
+          ? '2px solid #f59e0b'
+          : isDragOver
+            ? '2px solid #d97706'
+            : undefined,
+        backgroundColor: isSelected
+          ? 'rgba(120,53,15,0.4)'
+          : isDragOver
+            ? 'rgba(63,63,70,0.7)'
+            : 'rgba(39,39,42,0.5)',
+      }}
       draggable={!readOnly}
+      onClick={onSelect}
       onDragStart={onDragStart}
       onDragOver={e => {
         e.preventDefault();
-        onDragOver?.(e);
+        onDragOver(e);
       }}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      style={isOver ? { borderTop: '2px solid #f59e0b' } : undefined}
     >
-      {!readOnly && (
-        <div
-          className="cursor-grab text-zinc-600 hover:text-zinc-400 shrink-0 select-none"
-          title="Drag to reorder"
+      {!url || imgError ? (
+        <div className="w-8 h-8 rounded bg-zinc-600 flex items-center justify-center text-xs text-zinc-400">
+          ?
+        </div>
+      ) : (
+        <Image
+          src={url}
+          alt={item.label}
+          width={32}
+          height={32}
+          className="w-8 h-8 object-contain"
+          onError={() => setImgError(true)}
+          unoptimized
+        />
+      )}
+      {badge ? (
+        <span className="text-[9px] text-amber-400 font-semibold leading-tight">
+          {badge}
+        </span>
+      ) : showLabel ? (
+        <span
+          className="text-zinc-300 text-center px-1 w-full"
+          style={{
+            fontSize: '7px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            wordBreak: 'break-word',
+          }}
         >
-          ⠿
-        </div>
-      )}
-      {/* icon */}
-      <div className="w-8 h-8 shrink-0 flex items-center justify-center">
-        {url && !imgError ? (
-          <Image
-            src={url}
-            alt={item.label}
-            width={32}
-            height={32}
-            className="w-8 h-8 object-contain"
-            onError={() => setImgError(true)}
-            unoptimized
-          />
-        ) : (
-          <div className="w-8 h-8 rounded bg-zinc-600 flex items-center justify-center text-xs text-zinc-400">
-            ?
-          </div>
-        )}
-      </div>
-
-      {/* name */}
-      <span className="text-white text-xs font-medium flex-1 truncate min-w-0">
-        {item.label}
-      </span>
-
-      {/* editable field */}
-      {item.category === 'Skill' && (
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-zinc-400 text-xs">Lv</span>
-          {readOnly ? (
-            <span className="text-white text-xs font-semibold w-10 text-center">
-              {item.level || '—'}
-            </span>
-          ) : (
-            <input
-              type="text"
-              inputMode="numeric"
-              value={item.level ?? ''}
-              maxLength={2}
-              onChange={e => {
-                const val = e.target.value.replace(/\D/g, '');
-                onChange({ ...item, level: val });
-              }}
-              className="w-10 bg-zinc-700 text-white text-xs text-center rounded py-0.5 border border-zinc-600 focus:outline-none focus:border-amber-500"
-            />
-          )}
-        </div>
-      )}
-      {item.category === 'Item' && (
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-zinc-400 text-xs">Qty</span>
-          {readOnly ? (
-            <span className="text-white text-xs font-semibold w-14 text-center">
-              {item.qty || '—'}
-            </span>
-          ) : (
-            <input
-              type="text"
-              inputMode="numeric"
-              value={item.qty ?? '1'}
-              maxLength={6}
-              onChange={e => {
-                const val = e.target.value.replace(/\D/g, '');
-                onChange({ ...item, qty: val });
-              }}
-              className="w-14 bg-zinc-700 text-white text-xs text-center rounded py-0.5 border border-zinc-600 focus:outline-none focus:border-amber-500"
-            />
-          )}
-        </div>
-      )}
-
-      {/* delete */}
-      {!readOnly && (
-        <button
-          onClick={onDelete}
-          className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-700 transition-colors"
-          title="Remove"
-        >
-          ✕
-        </button>
+          {item.label}
+        </span>
+      ) : (
+        <span className="text-[9px] text-zinc-500">
+          {item.category.slice(0, 1)}
+        </span>
       )}
     </div>
   );
@@ -248,18 +255,29 @@ function EditModal({
   onClose,
   onChecklistChange,
 }: {
-  items: GItem[];
+  items: (GItem | null)[];
   checklist: CheckItem[];
   readOnly?: boolean;
-  onSave: (items: GItem[], checklist: CheckItem[]) => void;
+  onSave: (items: (GItem | null)[], checklist: CheckItem[]) => void;
   onClose: () => void;
   onChecklistChange?: (checklist: CheckItem[]) => void;
 }) {
-  const [draft, setDraft] = useState<GItem[]>(items);
+  // Draft con tamaño fijo: celdas vacías son null para permitir espacios libres
+  const [draft, setDraft] = useState<(GItem | null)[]>(() => {
+    const count = items.length;
+    const rows = Math.max(2, Math.ceil(Math.sqrt(count)));
+    const cols = Math.max(2, Math.ceil(count / rows));
+    const cells: (GItem | null)[] = Array(rows * cols).fill(null);
+    items.forEach((item, i) => {
+      cells[i] = item;
+    });
+    return cells;
+  });
   const [clDraft, setClDraft] = useState<CheckItem[]>(checklist);
   const [newTask, setNewTask] = useState('');
   const [mounted, setMounted] = useState(false);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -276,17 +294,20 @@ function EditModal({
 
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
-  const remove = (i: number) => setDraft(d => d.filter((_, idx) => idx !== i));
+  const remove = (i: number) => {
+    setDraft(d => d.map((it, idx) => (idx === i ? null : it)));
+    setSelectedIndex(null);
+  };
 
-  const handleDrop = (i: number) => {
+  // Swap: el ítem de origen ocupa la posición destino y viceversa
+  const handleDrop = (toIdx: number) => {
     const from = dragIndexRef.current;
     dragIndexRef.current = null;
     setOverIndex(null);
-    if (from === null || from === i) return;
+    if (from === null || from === toIdx) return;
     setDraft(d => {
       const next = [...d];
-      const [moved] = next.splice(from, 1);
-      next.splice(i, 0, moved);
+      [next[from], next[toIdx]] = [next[toIdx], next[from]];
       return next;
     });
   };
@@ -332,30 +353,126 @@ function EditModal({
 
         {/* single scrollable body: items + checklist */}
         <div className="flex-1 overflow-y-auto px-4">
-          {/* items */}
-          {draft.length === 0 ? (
-            <p className="text-zinc-500 text-xs text-center py-4">No items</p>
-          ) : (
-            draft.map((item, i) => (
-              <ModalRow
-                key={i}
-                item={item}
-                readOnly={readOnly}
-                onChange={updated => update(i, updated)}
-                onDelete={() => remove(i)}
-                isOver={overIndex === i}
-                onDragStart={() => {
-                  dragIndexRef.current = i;
-                }}
-                onDragOver={() => setOverIndex(i)}
-                onDrop={() => handleDrop(i)}
-                onDragEnd={() => {
-                  dragIndexRef.current = null;
-                  setOverIndex(null);
-                }}
-              />
-            ))
-          )}
+          {/* grid de ítems */}
+          {(() => {
+            const totalCells = draft.length;
+            const gridRows = Math.max(2, Math.ceil(Math.sqrt(totalCells)));
+            const gridCols = Math.max(2, Math.ceil(totalCells / gridRows));
+            const sel = selectedIndex !== null ? draft[selectedIndex] : null;
+            return (
+              <div className="py-3">
+                <div
+                  className="mx-auto"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${gridCols}, ${MODAL_CELL}px)`,
+                    gridTemplateRows: `repeat(${gridRows}, ${MODAL_CELL}px)`,
+                    gridAutoFlow: 'column',
+                    gap: 4,
+                    width: gridCols * MODAL_CELL + (gridCols - 1) * 4,
+                  }}
+                >
+                  {draft.map((item, i) => (
+                    <GridCell
+                      key={i}
+                      item={item}
+                      isSelected={selectedIndex === i}
+                      isDragOver={overIndex === i}
+                      readOnly={readOnly}
+                      onSelect={() =>
+                        item
+                          ? setSelectedIndex(prev => (prev === i ? null : i))
+                          : undefined
+                      }
+                      onDragStart={() => {
+                        dragIndexRef.current = i;
+                      }}
+                      onDragOver={() => setOverIndex(i)}
+                      onDrop={() => handleDrop(i)}
+                      onDragEnd={() => {
+                        dragIndexRef.current = null;
+                        setOverIndex(null);
+                      }}
+                    />
+                  ))}
+                </div>
+                {/* panel de edición del ítem seleccionado */}
+                {sel && selectedIndex !== null && (
+                  <div className="mt-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-white text-xs font-semibold flex-1 truncate">
+                        {sel.label}
+                      </span>
+                      {!readOnly && (
+                        <button
+                          onClick={() => {
+                            remove(selectedIndex);
+                            setSelectedIndex(null);
+                          }}
+                          className="shrink-0 text-xs text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {sel.category === 'Skill' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400 text-xs">Level</span>
+                        {readOnly ? (
+                          <span className="text-white text-xs font-semibold">
+                            {sel.level || '—'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={sel.level ?? ''}
+                            maxLength={2}
+                            onChange={e =>
+                              update(selectedIndex, {
+                                ...sel,
+                                level: e.target.value.replace(/\D/g, ''),
+                              })
+                            }
+                            className="w-12 bg-zinc-700 text-white text-xs text-center rounded py-0.5 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                          />
+                        )}
+                      </div>
+                    )}
+                    {sel.category === 'Item' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400 text-xs">Qty</span>
+                        {readOnly ? (
+                          <span className="text-white text-xs font-semibold">
+                            {sel.qty || '—'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={sel.qty ?? '1'}
+                            maxLength={6}
+                            onChange={e =>
+                              update(selectedIndex, {
+                                ...sel,
+                                qty: e.target.value.replace(/\D/g, ''),
+                              })
+                            }
+                            className="w-20 bg-zinc-700 text-white text-xs text-center rounded py-0.5 border border-zinc-600 focus:outline-none focus:border-amber-500"
+                          />
+                        )}
+                      </div>
+                    )}
+                    {(sel.category === 'Quest' || sel.category === 'Diary') && (
+                      <span className="text-zinc-500 text-[10px]">
+                        {sel.category}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* checklist section */}
           <div className="mt-2 mb-2">
@@ -507,9 +624,16 @@ export default function GroupNode({
   const readOnly =
     (data as GroupNodeData & { readOnly?: boolean }).readOnly ?? false;
 
-  const count = items.length || 1;
-  const rows = Math.max(2, Math.ceil(Math.sqrt(count)));
-  const cols = Math.max(2, Math.ceil(count / rows));
+  // Tamaño de grilla basado en ítems reales (sin nulls)
+  const realCount = items.filter(Boolean).length || 1;
+  const rows = Math.max(2, Math.ceil(Math.sqrt(realCount)));
+  const cols = Math.max(2, Math.ceil(realCount / rows));
+  // Total de celdas = tamaño fijo de la grilla (puede incluir nulls hasta ese tamaño)
+  const totalCells = rows * cols;
+  const paddedItems: (GItem | null)[] = Array(totalCells).fill(null);
+  items.forEach((item, i) => {
+    if (i < totalCells) paddedItems[i] = item;
+  });
 
   const nodeW = cols * CELL_W + H_PAD;
   const nodeH = rows * CELL_H + V_PAD;
@@ -572,7 +696,7 @@ export default function GroupNode({
               gridAutoFlow: 'column',
             }}
           >
-            {items.map((item, i) => (
+            {paddedItems.map((item, i) => (
               <ItemCell key={i} item={item} />
             ))}
           </div>

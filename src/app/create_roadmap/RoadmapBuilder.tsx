@@ -305,7 +305,9 @@ export default function RoadmapBuilder({
         // ── Merge dragged node into target ──────────────────────────
         const extractItems = (node: Node): GItem[] => {
           if (node.type === 'groupNode') {
-            return (node.data as { items?: GItem[] }).items ?? [];
+            return (
+              (node.data as { items?: (GItem | null)[] }).items ?? []
+            ).filter((x): x is GItem => x !== null);
           }
           const d = node.data as Record<string, unknown>;
           return [
@@ -457,19 +459,29 @@ export default function RoadmapBuilder({
       // touches these objects, but we still sanitize here for clean DB data.
       const safeNodes = nodes.map(n => {
         if (n.type === 'groupNode') {
-          const d = n.data as { items?: GItem[]; checklist?: unknown[] };
+          const d = n.data as {
+            items?: (GItem | null)[];
+            checklist?: unknown[];
+          };
           return {
             id: String(n.id),
             type: 'groupNode',
             position: { x: Number(n.position.x), y: Number(n.position.y) },
             data: {
-              items: (d.items ?? []).map(item => ({
-                label: String(item.label ?? ''),
-                icon_url: item.icon_url != null ? String(item.icon_url) : null,
-                category: String(item.category ?? ''),
-                ...(item.level != null ? { level: String(item.level) } : {}),
-                ...(item.qty != null ? { qty: String(item.qty) } : {}),
-              })),
+              items: (d.items ?? []).map(item =>
+                item === null
+                  ? null
+                  : {
+                      label: String(item.label ?? ''),
+                      icon_url:
+                        item.icon_url != null ? String(item.icon_url) : null,
+                      category: String(item.category ?? ''),
+                      ...(item.level != null
+                        ? { level: String(item.level) }
+                        : {}),
+                      ...(item.qty != null ? { qty: String(item.qty) } : {}),
+                    }
+              ),
               checklist: d.checklist ?? [],
             },
           };
