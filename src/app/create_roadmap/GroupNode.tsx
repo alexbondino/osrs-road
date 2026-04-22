@@ -17,6 +17,7 @@ interface GroupNodeData {
   items: GItem[];
   _dockHighlight?: boolean;
   checklist?: string[];
+  completed?: boolean;
 }
 
 const QUEST_ICON =
@@ -349,6 +350,7 @@ export default function GroupNode({
 
   const items = data.items ?? [];
   const highlighted = data._dockHighlight ?? false;
+  const completed = data.completed ?? false;
 
   const count = items.length || 1;
   const rows = Math.max(2, Math.ceil(Math.sqrt(count)));
@@ -363,7 +365,9 @@ export default function GroupNode({
         className={`relative border-2 rounded-xl transition-all ${
           highlighted
             ? 'border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)] bg-zinc-700'
-            : 'border-amber-500/50 bg-zinc-800/90 shadow-xl'
+            : completed
+              ? 'border-amber-500 bg-amber-900/60 shadow-amber-900/40'
+              : 'border-zinc-600 bg-zinc-800/90 shadow-xl'
         }`}
         style={{ width: nodeW, height: nodeH }}
         onDoubleClick={e => {
@@ -372,6 +376,20 @@ export default function GroupNode({
         }}
         title="Double-click to edit"
       >
+        {completed && (
+          <div
+            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center"
+            style={{
+              fontSize: '10px',
+              lineHeight: 1,
+              color: '#1c1917',
+              fontWeight: 700,
+              zIndex: 10,
+            }}
+          >
+            ✓
+          </div>
+        )}
         <Handle
           type="target"
           position={Position.Left}

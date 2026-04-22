@@ -68,7 +68,7 @@ export default function ItemNode({
           data._dockHighlight
             ? 'bg-zinc-700 border-amber-400 shadow-[0_0_22px_6px_rgba(251,191,36,0.6)]'
             : completed
-              ? 'bg-amber-950 border-amber-500 shadow-amber-900/40'
+              ? 'bg-amber-900/60 border-amber-500 shadow-amber-900/40'
               : 'bg-zinc-800 border-zinc-600 hover:border-amber-500'
         }`}
         style={{ width: 140, height: 130 }}
