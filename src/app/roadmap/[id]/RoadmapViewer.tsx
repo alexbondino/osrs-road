@@ -7,8 +7,8 @@ import {
   Controls,
   Background,
   BackgroundVariant,
-  SmoothStepEdge,
   useNodesState,
+  useEdgesState,
   useViewport,
   useReactFlow,
   type Node,
@@ -18,13 +18,14 @@ import {
 import '@xyflow/react/dist/style.css';
 import ItemNode from '@/app/create_roadmap/ItemNode';
 import GroupNode from '@/app/create_roadmap/GroupNode';
+import MidpointEdge from '@/app/create_roadmap/MidpointEdge';
 import Image from 'next/image';
 import type { Roadmap } from '@/lib/roadmaps';
 import { fetchProgress, saveProgress } from '@/lib/roadmaps';
 import { useAuth } from '@/hooks/useAuth';
 
 const nodeTypes = { itemNode: ItemNode, groupNode: GroupNode };
-const edgeTypes = { midpoint: SmoothStepEdge };
+const edgeTypes = { midpoint: MidpointEdge };
 
 const QUEST_ICON =
   'https://oldschool.runescape.wiki/images/Quest_point_icon.png';
@@ -244,6 +245,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       },
     }))
   );
+  const [edges] = useEdgesState(rawEdges);
   nodesRef.current = nodes;
 
   // Cargar progreso al montar
@@ -468,7 +470,7 @@ export default function RoadmapViewer({ roadmap }: { roadmap: Roadmap }) {
       <ReactFlow
         className="flex-1"
         nodes={nodes}
-        edges={rawEdges}
+        edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
