@@ -295,7 +295,29 @@ function EditModal({
   const update = (i: number, updated: GItem) =>
     setDraft(d => d.map((it, idx) => (idx === i ? updated : it)));
   const remove = (i: number) => {
-    setDraft(d => d.map((it, idx) => (idx === i ? null : it)));
+    setDraft(d => {
+      const next = d.map((it, idx) => (idx === i ? null : it));
+      const realCount = next.filter(Boolean).length || 1;
+      const rows = Math.max(2, Math.ceil(Math.sqrt(realCount)));
+      const cols = Math.max(2, Math.ceil(realCount / rows));
+      const totalCells = rows * cols;
+      if (next.length === totalCells) return next;
+
+      // Ítems que caben en el nuevo tamaño vs los que quedan fuera
+      const resized: (GItem | null)[] = Array(totalCells).fill(null);
+      const overflow: GItem[] = [];
+      next.forEach((item, idx) => {
+        if (item === null) return;
+        if (idx < totalCells) resized[idx] = item;
+        else overflow.push(item);
+      });
+      // Mover overflow a los primeros huecos libres
+      let oi = 0;
+      for (let j = 0; j < totalCells && oi < overflow.length; j++) {
+        if (resized[j] === null) resized[j] = overflow[oi++];
+      }
+      return resized;
+    });
     setSelectedIndex(null);
   };
 
