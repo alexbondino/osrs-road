@@ -57,7 +57,7 @@ function ItemCell({ item }: { item: GItem }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {hovered && (
+      {hovered && !showLabel && (
         <div className="absolute z-50 bottom-full mb-1 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-600 rounded px-1.5 py-0.5 text-[9px] text-white whitespace-nowrap shadow-lg pointer-events-none">
           {item.label}
         </div>
@@ -310,6 +310,7 @@ export default function GroupNode({
           e.stopPropagation();
           setModalOpen(true);
         }}
+        title="Double-click to edit"
       >
         <Handle
           type="target"
