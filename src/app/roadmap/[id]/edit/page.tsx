@@ -18,6 +18,7 @@ export default async function EditRoadmapPage({ params }: Props) {
     { data: quests },
     { data: diaries },
     { count: itemsCount },
+    { count: monstersCount },
   ] = await Promise.all([
     fetchRoadmapById(id),
     supabase
@@ -34,6 +35,7 @@ export default async function EditRoadmapPage({ params }: Props) {
       .order('area')
       .order('tier'),
     supabase.from('items').select('id', { count: 'exact', head: true }),
+    supabase.from('monsters').select('id', { count: 'exact', head: true }),
   ]);
 
   if (!roadmap) notFound();
@@ -47,6 +49,7 @@ export default async function EditRoadmapPage({ params }: Props) {
             quests={quests ?? []}
             diaries={diaries ?? []}
             itemsCount={itemsCount ?? 0}
+            monstersCount={monstersCount ?? 0}
             initialNodes={roadmap.nodes}
             initialEdges={roadmap.edges}
             initialName={roadmap.name}
