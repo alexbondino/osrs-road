@@ -39,12 +39,22 @@ CREATE TABLE IF NOT EXISTS public.quests (
   icon_url   TEXT
 );
 
+-- ── Monsters ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.monsters (
+  id           SERIAL PRIMARY KEY,
+  name         TEXT UNIQUE NOT NULL,
+  combat_level INTEGER,
+  members      BOOLEAN NOT NULL DEFAULT FALSE,
+  icon_url     TEXT
+);
+
 -- =========================================================
 -- Habilitar Row Level Security (recomendado)
 -- =========================================================
 ALTER TABLE public.items  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.monsters ENABLE ROW LEVEL SECURITY;
 
 -- Política: lectura pública, escritura solo con service_role
 CREATE POLICY "read_items_public"  ON public.items  FOR SELECT USING (true);

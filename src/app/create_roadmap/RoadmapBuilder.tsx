@@ -65,6 +65,7 @@ export default function RoadmapBuilder({
   quests,
   diaries,
   itemsCount,
+  monstersCount,
   initialNodes = [],
   initialEdges = [],
   initialName = 'My Roadmap',
@@ -75,6 +76,7 @@ export default function RoadmapBuilder({
   quests: Quest[];
   diaries: Diary[];
   itemsCount: number;
+  monstersCount: number;
   initialNodes?: Node[];
   initialEdges?: Edge[];
   initialName?: string;
@@ -693,6 +695,7 @@ export default function RoadmapBuilder({
           quests={quests}
           diaries={diaries}
           itemsCount={itemsCount}
+          monstersCount={monstersCount}
         />
 
         {/* Canvas */}

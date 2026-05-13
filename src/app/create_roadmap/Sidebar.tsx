@@ -8,7 +8,7 @@ export interface SidebarItem {
   id: number;
   name: string;
   icon_url: string | null;
-  category: 'Skill' | 'Item' | 'Quest' | 'Diary';
+  category: 'Skill' | 'Item' | 'Quest' | 'Diary' | 'Monster';
   max_level?: number;
 }
 
@@ -90,22 +90,24 @@ export default function Sidebar({
   quests,
   diaries,
   itemsCount,
+  monstersCount,
 }: {
   skills: Skill[];
   quests: Quest[];
   diaries: Diary[];
   itemsCount: number;
+  monstersCount: number;
 }) {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<SidebarItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'skills' | 'quests' | 'diaries' | 'items'>(
-    'skills'
-  );
+  const [tab, setTab] = useState<
+    'skills' | 'quests' | 'diaries' | 'items' | 'monsters'
+  >('skills');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (tab !== 'items') return;
+    if (tab !== 'items' && tab !== 'monsters') return;
     if (query.length < 2) {
       setItems([]);
       return;
@@ -114,8 +116,9 @@ export default function Sidebar({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
+      const table = tab === 'monsters' ? 'monsters' : 'items';
       const { data } = await supabase
-        .from('items')
+        .from(table)
         .select('id, name, icon_url')
         .ilike('name', `%${query}%`)
         .limit(40);
@@ -124,7 +127,8 @@ export default function Sidebar({
           id: r.id,
           name: r.name,
           icon_url: r.icon_url,
-          category: 'Item' as const,
+          category:
+            table === 'monsters' ? ('Monster' as const) : ('Item' as const),
         }))
       );
       setLoading(false);
@@ -161,6 +165,10 @@ export default function Sidebar({
       label: `Diaries (${formatCount(diaries.length)})`,
     },
     { key: 'items' as const, label: `Items (${formatCount(itemsCount)})` },
+    {
+      key: 'monsters' as const,
+      label: `Monsters (${formatCount(monstersCount)})`,
+    },
   ];
 
   return (
@@ -210,21 +218,21 @@ export default function Sidebar({
           diaryItems
             .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
             .map(item => <DraggableItem key={item.id} item={item} />)}
-        {tab === 'items' && query.length < 2 && (
+        {(tab === 'items' || tab === 'monsters') && query.length < 2 && (
           <p className="text-zinc-500 text-xs text-center mt-6 px-4">
-            Type at least 2 characters to search items
+            Type at least 2 characters to search {tab}
           </p>
         )}
-        {tab === 'items' && loading && (
+        {(tab === 'items' || tab === 'monsters') && loading && (
           <p className="text-zinc-400 text-xs text-center mt-6">Searching...</p>
         )}
-        {tab === 'items' &&
+        {(tab === 'items' || tab === 'monsters') &&
           !loading &&
           query.length >= 2 &&
           items.length === 0 && (
             <p className="text-zinc-500 text-xs text-center mt-6">No results</p>
           )}
-        {tab === 'items' &&
+        {(tab === 'items' || tab === 'monsters') &&
           !loading &&
           items.map(item => <DraggableItem key={item.id} item={item} />)}
       </div>

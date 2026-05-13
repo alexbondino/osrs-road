@@ -8,6 +8,7 @@ export default async function CreateRoadmapPage() {
     { data: quests },
     { data: diaries },
     { count: itemsCount },
+    { count: monstersCount },
   ] = await Promise.all([
     supabase
       .from('skills')
@@ -23,6 +24,7 @@ export default async function CreateRoadmapPage() {
       .order('area')
       .order('tier'),
     supabase.from('items').select('id', { count: 'exact', head: true }),
+    supabase.from('monsters').select('id', { count: 'exact', head: true }),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function CreateRoadmapPage() {
           quests={quests ?? []}
           diaries={diaries ?? []}
           itemsCount={itemsCount ?? 0}
+          monstersCount={monstersCount ?? 0}
         />
       </ReactFlowProvider>
     </div>

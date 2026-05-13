@@ -37,8 +37,8 @@ from supabase import create_client, Client
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", os.getenv("NEXT_PUBLIC_SUPABASE_URL", ""))
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""))
 
 OSRS_MAPPING_URL = "https://prices.runescape.wiki/api/v1/osrs/mapping"
 OSRS_WIKI_ICON_BASE = "https://oldschool.runescape.wiki/images"
@@ -646,6 +646,140 @@ def sync_quests(sb: Client) -> None:
     log(f"  ✓ Quests sincronizados ({len(wiki_quests)} total)")
 
 
+def _fetch_monsters_from_wiki() -> list[dict]:
+    """
+    Descarga todos los monsters del wiki parseando Template:Infobox Monster.
+    Devuelve lista de dicts listos para Supabase.
+    """
+    RE_INFOBOX_MONSTER = re.compile(r'\{\{Infobox\s+Monster(.*?)\}\}', re.IGNORECASE | re.DOTALL)
+    RE_WIKILINK = re.compile(r'\[\[([^\]\|]+)(?:\|[^\]]+)?\]\]')
+
+    def parse_infobox_fields(infobox_text: str) -> dict:
+        """Parsea los campos de un infobox línea por línea"""
+        fields = {}
+        lines = infobox_text.split('\n')
+        current_field = None
+        current_value = []
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('|') and '=' in line:
+                # Nueva línea de campo
+                if current_field:
+                    fields[current_field] = '\n'.join(current_value)
+                parts = line[1:].split('=', 1)  # Remove leading |
+                current_field = parts[0].strip()
+                current_value = [parts[1].strip() if len(parts) > 1 else '']
+            elif current_field and line and not line.startswith('}'):
+                # Continuación del valor anterior
+                current_value.append(line)
+        
+        # Añadir el último campo
+        if current_field:
+            fields[current_field] = '\n'.join(current_value)
+        
+        return fields
+
+    def clean(val: str) -> str:
+        val = RE_WIKILINK.sub(r'\1', val)
+        val = val.split(',')[0].split('#')[0].strip()
+        if val.lower().startswith('file:') or val.lower().startswith('image:'):
+            val = val.split(':', 1)[1]
+        return val
+
+    def parse_combat(value: str) -> int | None:
+        if not value:
+            return None
+        m = re.search(r'(\d+)', value)
+        return int(m.group(1)) if m else None
+
+    monsters: list[dict] = []
+    seen: set[str] = set()
+    params: dict = {
+        "action":        "query",
+        "generator":     "embeddedin",
+        "geititle":      "Template:Infobox Monster",
+        "geilimit":      str(WIKI_PAGE_LIMIT),
+        "prop":          "revisions",
+        "rvprop":        "content",
+        "rvslots":       "main",
+        "format":        "json",
+        "formatversion": "2",
+    }
+
+    while True:
+        for attempt in range(1, WIKI_RETRIES + 1):
+            try:
+                resp = requests.get(WIKI_API, params=params, headers=HEADERS, timeout=45)
+                resp.raise_for_status()
+                break
+            except requests.exceptions.Timeout:
+                time.sleep(attempt * 5)
+        else:
+            break
+
+        data = resp.json()
+        for page in data.get("query", {}).get("pages", []):
+            revisions = page.get("revisions")
+            if not revisions:
+                continue
+            wikitext = (
+                revisions[0].get("slots", {}).get("main", {}).get("content")
+                or revisions[0].get("content", "")
+            )
+            m = RE_INFOBOX_MONSTER.search(wikitext)
+            if not m:
+                continue
+            
+            fields = parse_infobox_fields(m.group(1))
+            name = clean(fields.get("name", page["title"]))
+            if not name or name in seen:
+                continue
+
+            image = clean(fields.get("image", "")) or clean(fields.get("image1", ""))
+            icon_url = icon_to_url(image) if image else None
+            combat_level = parse_combat(clean(fields.get("combat", "")) or clean(fields.get("combat_level", "")))
+            members_raw = clean(fields.get("members", "No")).lower()
+            members = members_raw in ("yes", "true", "1")
+
+            monsters.append({
+                "name": name,
+                "combat_level": combat_level,
+                "members": members,
+                "icon_url": icon_url,
+            })
+            seen.add(name)
+
+        if "continue" not in data:
+            break
+        params.update(data["continue"])
+        time.sleep(WIKI_DELAY)
+
+    return monsters
+
+
+def sync_monsters(sb: Client) -> None:
+    log("Sincronizando monsters desde el wiki OSRS...")
+    wiki_monsters = _fetch_monsters_from_wiki()
+    log(f"  → {len(wiki_monsters)} monsters encontrados en el wiki")
+
+    unique_monsters: list[dict] = []
+    seen_names: set[str] = set()
+    for monster in wiki_monsters:
+        name = monster["name"].strip()
+        if name and name not in seen_names:
+            seen_names.add(name)
+            monster["name"] = name
+            unique_monsters.append(monster)
+
+    if not unique_monsters:
+        log("  ✓ No hay monsters para sincronizar")
+        return
+
+    sb.table("monsters").upsert(unique_monsters, on_conflict="name").execute()
+    log(f"  ✓ Monsters sincronizados ({len(unique_monsters)} únicos, {len(seen_names)} nombres)")
+
+
 def main() -> None:
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         print("ERROR: Faltan SUPABASE_URL o SUPABASE_SERVICE_KEY en el .env")
@@ -657,6 +791,7 @@ def main() -> None:
     sync_items(sb)
     sync_skills(sb)
     sync_quests(sb)
+    sync_monsters(sb)
     sync_diaries(sb)
     sync_untradeable_items(sb)
 
